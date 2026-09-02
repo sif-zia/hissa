@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "preact/hooks";
+import { useCallback, useEffect, useRef, useState } from "preact/hooks";
 import { useLocation, useRoute } from "wouter-preact";
 
 import { Home } from "./screens/Home";
@@ -79,13 +79,21 @@ export function App() {
     }
   }, [code]);
 
-  // Adopt my own claims from the server the first time they arrive, so a
-  // reload or a second device picks up where I left off.
-  const serverMine = me && sync.state?.people.find((p) => p.key === me.key);
+  /*
+   * Two ways in, one owner of `mine`.
+   *
+   * Landing on /s/CODE with a remembered name has to adopt my claims from the
+   * server; joining through the form already knows them from the fetch it
+   * made. This ref is what stops the second case being clobbered by a poll
+   * that was in flight before I identified myself.
+   */
+  const adopted = useRef<string | null>(null);
   useEffect(() => {
-    if (serverMine) setMine(serverMine.claims);
-    // Only on identity change: after that, local optimistic state wins.
-  }, [me?.key]); // eslint-disable-line react-hooks/exhaustive-deps
+    if (!me || !sync.state) return;
+    if (adopted.current === me.key) return;
+    adopted.current = me.key;
+    setMine(sync.state.people.find((p) => p.key === me.key)?.claims ?? {});
+  }, [me, sync.state]);
 
   /* --- flows ------------------------------------------------------------- */
 
@@ -142,6 +150,7 @@ export function App() {
         host: { name: who.name, slug: who.slug },
       });
       saveMe(out.meta.code, who);
+      adopted.current = who.key;
       setMe(who);
       setMine({});
       navigate(`/s/${out.meta.code}`);
@@ -170,6 +179,7 @@ export function App() {
       if (!existing) await putClaims(c, { name: who.name, slug: who.slug }, {});
 
       saveMe(c, who);
+      adopted.current = who.key; // this fetch is fresher than any pending poll
       setMe(who);
       setMine(existing?.claims ?? {});
       setScreen("home");
@@ -184,6 +194,7 @@ export function App() {
   const changeName = () => {
     if (!code) return;
     forgetMe(code);
+    adopted.current = null;
     setMe(null);
     setMine({});
     setJoinCode(code);
