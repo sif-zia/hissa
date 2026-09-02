@@ -63,6 +63,8 @@ export function Editor({
         </span>
       </div>
 
+      <hr class="rule-dash" />
+
       <div class="lines">
         {bill.items.map((it) => (
           <div key={it.id} class="line-grid" style={{ marginBottom: 12 }}>
@@ -109,7 +111,9 @@ export function Editor({
         ))}
       </div>
 
-      <button class="tiny" style={{ marginTop: 4 }} onClick={addLine}>
+      <hr class="rule-dash" />
+
+      <button class="tiny" onClick={addLine}>
         + another line
       </button>
 

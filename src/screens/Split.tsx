@@ -62,6 +62,9 @@ export function Split({
         {stale ? <span class="scrawl dim" style={{ marginLeft: 10 }}>catching up…</span> : null}
       </p>
 
+      {/* The item list is a block on the bill: ruled off top and bottom. */}
+      <hr class="rule-dash" />
+
       <div class="lines">
         {meta.lines.map((line) => {
           const on = byLine[line.id] ?? [];
@@ -100,7 +103,7 @@ export function Split({
         })}
       </div>
 
-      <hr class="rule-dash" style={{ marginTop: 20 }} />
+      <hr class="rule-dash" />
 
       <div class="row" style={{ alignItems: "center" }}>
         <span>

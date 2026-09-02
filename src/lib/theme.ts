@@ -30,5 +30,5 @@ export function applyTheme(t: Theme): void {
 export const nextTheme = (t: Theme): Theme =>
   THEMES[(THEMES.indexOf(t) + 1) % THEMES.length] as Theme;
 
-export const themeLabel = (t: Theme): string =>
-  t === "light" ? "☀" : t === "dark" ? "☾" : "◐";
+export const themeName = (t: Theme): string =>
+  t === "system" ? "following your system" : t;

@@ -554,6 +554,8 @@ button, input, select, textarea { font: inherit; color: inherit; }
   background: color-mix(in srgb, var(--rose) 11%, transparent);
   box-shadow: inset 3px 0 0 var(--rose);
 }
+/* The list is ruled off as a block, so the last row does not need
+   its own line under it. */
 .item:last-child { border-bottom: none; }
 
 .step {
@@ -614,8 +616,10 @@ button, input, select, textarea { font: inherit; color: inherit; }
   top: 14px;
   right: 12px;
   z-index: 5;
-  width: 32px;
-  height: 32px;
+  width: 34px;
+  height: 34px;
+  display: grid;
+  place-items: center;
   border: 1px solid var(--paper-edge);
   background: var(--paper-2);
   color: var(--ink-3);
