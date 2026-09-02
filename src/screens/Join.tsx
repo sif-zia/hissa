@@ -51,7 +51,7 @@ export function Join({
 
       <button
         class="btn"
-        style={{ ...tiltStyle("go-join", 0.3), marginTop: 34 }}
+        style={{ ...tiltStyle("go-join", "card"), marginTop: 34 }}
         onClick={onGo}
         disabled={busy || !code.trim() || !name.trim()}
       >

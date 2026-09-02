@@ -45,7 +45,7 @@ export function Start({
 
       <button
         class="btn"
-        style={{ ...tiltStyle("go-open", 0.3), marginTop: 34 }}
+        style={{ ...tiltStyle("go-open", "card"), marginTop: 34 }}
         onClick={onGo}
         disabled={busy || !hostName.trim()}
       >

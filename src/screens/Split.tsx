@@ -187,7 +187,7 @@ function Chip({
   return (
     <span
       class={`chip${landed ? " landed" : ""}`}
-      style={{ ...tiltStyle(`${person.key}-${lineId}`, 0.35), background: colorFor(person.key) }}
+      style={{ ...tiltStyle(`${person.key}-${lineId}`, "scrap"), background: colorFor(person.key) }}
     >
       {person.name}
       {isMe ? (

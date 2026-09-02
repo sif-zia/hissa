@@ -21,15 +21,15 @@ export function Home({
       />
 
       <div class="stack">
-        <button class="choice" style={tiltStyle("home-cam", 0.5)} onClick={onCamera}>
+        <button class="choice" style={tiltStyle("home-cam", "card")} onClick={onCamera}>
           <b>take a pic</b>
           <span class="dim small">snap the receipt, the lines fill themselves in</span>
         </button>
-        <button class="choice" style={tiltStyle("home-man", 0.5)} onClick={onManual}>
+        <button class="choice" style={tiltStyle("home-man", "card")} onClick={onManual}>
           <b>enter manually</b>
           <span class="dim small">type the items yourself</span>
         </button>
-        <button class="choice" style={tiltStyle("home-join", 0.5)} onClick={onJoin}>
+        <button class="choice" style={tiltStyle("home-join", "card")} onClick={onJoin}>
           <b>join a split</b>
           <span class="dim small">someone sent you a code</span>
         </button>
@@ -45,7 +45,7 @@ export function Home({
               <button
                 key={c}
                 class="tiny amt"
-                style={tiltStyle(`r-${c}`, 0.5)}
+                style={tiltStyle(`r-${c}`, "scrap")}
                 onClick={() => onResume(c)}
               >
                 {c}

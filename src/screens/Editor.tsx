@@ -97,8 +97,7 @@ export function Editor({
                 />
               </label>
               <button
-                class="link"
-                style={{ fontSize: "1rem", paddingBottom: 8 }}
+                class="scratch"
                 onClick={() => dropLine(it.id)}
                 aria-label={`Remove ${it.name || "this line"}`}
                 disabled={bill.items.length <= 1}
@@ -164,7 +163,7 @@ export function Editor({
 
       <hr class="rule-dash" />
 
-      <div class="sticky" style={tiltStyle("totals", 0.3)}>
+      <div class="sticky" style={tiltStyle("totals", "note")}>
         <div class="row"><span class="dim">subtotal</span><Amount value={money(t.subtotal)} /></div>
         {num(bill.gst) ? (
           <div class="row"><span class="dim">gst {bill.gst}%</span><Amount value={money(t.gstAmt)} /></div>
@@ -183,7 +182,7 @@ export function Editor({
       </div>
 
       <div class="stack" style={{ marginTop: 22 }}>
-        <button class="btn" style={tiltStyle("go-tap", 0.3)} onClick={onStart} disabled={!t.subtotal}>
+        <button class="btn" style={tiltStyle("go-tap", "card")} onClick={onStart} disabled={!t.subtotal}>
           tap to split
         </button>
         <button class="btn btn-alt" onClick={onEqual} disabled={!t.subtotal}>

@@ -24,7 +24,7 @@ export function Preview({
         error={error}
       />
 
-      <figure class="sticky dogear" style={{ ...tiltStyle("prev", 0.4), margin: 0, padding: 10 }}>
+      <figure class="sticky dogear" style={{ ...tiltStyle("prev", "note"), margin: 0, padding: 10 }}>
         <img src={shot.preview} alt="The bill you photographed" style={{ display: "block", width: "100%" }} />
         <figcaption class="scrawl dim small" style={{ marginTop: 8 }}>
           pasted in from the camera roll
@@ -32,7 +32,7 @@ export function Preview({
       </figure>
 
       <div class="stack" style={{ marginTop: 26 }}>
-        <button class="btn" style={tiltStyle("go-next", 0.3)} onClick={onNext} disabled={reading}>
+        <button class="btn" style={tiltStyle("go-next", "card")} onClick={onNext} disabled={reading}>
           {reading ? "reading it…" : "read it"}
         </button>
         <button class="btn btn-alt" onClick={onRetake} disabled={reading}>

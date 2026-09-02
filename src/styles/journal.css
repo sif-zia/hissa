@@ -14,6 +14,7 @@
   color-scheme: light;
 
   /* paper */
+  --ground: #e7ddc6;
   --paper: #f3ecda;
   --paper-2: #efe6d0;
   --paper-edge: #e2d7bd;
@@ -21,6 +22,7 @@
   --dot: rgba(120, 106, 84, 0.13);
   --margin-line: rgba(198, 122, 138, 0.42);
   --stain: rgba(150, 122, 72, 0.05);
+  --tape: rgba(214, 196, 156, 0.45);
 
   /* ink */
   --ink: #2b2925;
@@ -60,6 +62,7 @@
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
     color-scheme: dark;
+    --ground: #171512;
     --paper: #211f1b;
     --paper-2: #262320;
     --paper-edge: #35312a;
@@ -67,6 +70,7 @@
     --dot: rgba(226, 213, 184, 0.09);
     --margin-line: rgba(198, 122, 138, 0.34);
     --stain: rgba(226, 200, 140, 0.03);
+    --tape: rgba(226, 213, 184, 0.09);
     --ink: #ece3cf;
     --ink-2: #c3b99f;
     --ink-3: #938b76;
@@ -82,6 +86,7 @@
 
 [data-theme="dark"] {
   color-scheme: dark;
+  --ground: #171512;
   --paper: #211f1b;
   --paper-2: #262320;
   --paper-edge: #35312a;
@@ -89,6 +94,7 @@
   --dot: rgba(226, 213, 184, 0.09);
   --margin-line: rgba(198, 122, 138, 0.34);
   --stain: rgba(226, 200, 140, 0.03);
+  --tape: rgba(226, 213, 184, 0.09);
   --ink: #ece3cf;
   --ink-2: #c3b99f;
   --ink-3: #938b76;
@@ -123,43 +129,50 @@ body {
 /* --------------------------------------------------------------- surface */
 
 /*
- * The paper itself: ruled lines at the pitch, a faint dot grid, one pink
- * margin rule and two soft age stains. All gradients — zero image requests.
+ * The sheet IS the paper, sitting on a plain ground. Putting the ruling on
+ * the whole viewport instead made the desk look ruled and stranded the margin
+ * line half a screen from the text it belongs to.
  */
 .paper {
-  position: relative;
-  background-color: var(--paper);
-  background-image:
-    radial-gradient(ellipse 60% 40% at 82% 12%, var(--stain), transparent 70%),
-    radial-gradient(ellipse 50% 35% at 12% 88%, var(--stain), transparent 70%),
-    linear-gradient(var(--margin-line), var(--margin-line)),
-    repeating-linear-gradient(to bottom, transparent 0 calc(var(--line-pitch) - 1px), var(--rule) calc(var(--line-pitch) - 1px) var(--line-pitch)),
-    radial-gradient(var(--dot) 0.9px, transparent 0.9px);
-  background-size: 100% 100%, 100% 100%, 1.5px 100%, 100% 100%, 16px 16px;
-  background-position: 0 0, 0 0, 40px 0, 0 0, 4px 4px;
-  background-repeat: no-repeat, no-repeat, no-repeat, repeat, repeat;
-  background-attachment: local;
-}
-
-/* Narrow screens lose the margin rule — 40px of gutter is a real cost on a
-   360px phone and the ruling alone still reads as paper. */
-@media (max-width: 460px) {
-  .paper { background-image:
-    radial-gradient(ellipse 60% 40% at 82% 12%, var(--stain), transparent 70%),
-    radial-gradient(ellipse 50% 35% at 12% 88%, var(--stain), transparent 70%),
-    repeating-linear-gradient(to bottom, transparent 0 calc(var(--line-pitch) - 1px), var(--rule) calc(var(--line-pitch) - 1px) var(--line-pitch)),
-    radial-gradient(var(--dot) 0.9px, transparent 0.9px);
-    background-size: 100% 100%, 100% 100%, 100% 100%, 16px 16px;
-    background-position: 0 0, 0 0, 0 0, 4px 4px;
-    background-repeat: no-repeat, no-repeat, repeat, repeat;
-  }
+  min-height: 100dvh;
+  background: var(--ground);
 }
 
 .sheet {
+  position: relative;
   max-width: 560px;
   margin-inline: auto;
   min-height: 100dvh;
   padding: var(--pad) var(--pad) calc(140px + env(safe-area-inset-bottom));
+  /* Text clears the margin rule; the rule itself sits in the gutter. */
+  padding-left: 46px;
+  background-color: var(--paper);
+  background-image:
+    radial-gradient(ellipse 60% 30% at 84% 9%, var(--stain), transparent 70%),
+    radial-gradient(ellipse 45% 26% at 10% 72%, var(--stain), transparent 70%),
+    linear-gradient(var(--margin-line), var(--margin-line)),
+    repeating-linear-gradient(to bottom, transparent 0 calc(var(--line-pitch) - 1px), var(--rule) calc(var(--line-pitch) - 1px) var(--line-pitch)),
+    radial-gradient(var(--dot) 0.9px, transparent 0.9px);
+  background-size: 100% 100%, 100% 100%, 1.5px 100%, 100% 100%, 16px 16px;
+  background-position: 0 0, 0 0, 32px 0, 0 0, 4px 4px;
+  background-repeat: no-repeat, no-repeat, no-repeat, repeat, repeat;
+  box-shadow: 0 0 0 1px var(--paper-edge), 0 14px 40px rgba(43, 41, 37, 0.1);
+}
+
+/* On a phone the sheet fills the screen, so the gutter is lost width. */
+@media (max-width: 460px) {
+  .sheet {
+    padding-left: var(--pad);
+    background-image:
+      radial-gradient(ellipse 60% 30% at 84% 9%, var(--stain), transparent 70%),
+      radial-gradient(ellipse 45% 26% at 10% 72%, var(--stain), transparent 70%),
+      repeating-linear-gradient(to bottom, transparent 0 calc(var(--line-pitch) - 1px), var(--rule) calc(var(--line-pitch) - 1px) var(--line-pitch)),
+      radial-gradient(var(--dot) 0.9px, transparent 0.9px);
+    background-size: 100% 100%, 100% 100%, 100% 100%, 16px 16px;
+    background-position: 0 0, 0 0, 0 0, 4px 4px;
+    background-repeat: no-repeat, no-repeat, repeat, repeat;
+    box-shadow: none;
+  }
 }
 
 /* ------------------------------------------------------------ stationery */
@@ -172,6 +185,9 @@ body {
   border: 1px solid var(--paper-edge);
   box-shadow: var(--shadow-hard);
   padding: 14px 16px;
+  /* Inset, so the lean reads as something placed by hand rather than a
+     full-bleed block that failed to line up. */
+  margin-inline: 6px 10px;
   transform: rotate(var(--tilt));
 }
 
@@ -192,8 +208,8 @@ body {
   top: -9px; left: 50%;
   width: 78px; height: 18px;
   transform: translateX(-50%) rotate(-2.5deg);
-  background: rgba(226, 213, 184, 0.55);
-  border-inline: 1px dashed rgba(120, 106, 84, 0.2);
+  background: var(--tape);
+  border-inline: 1px dashed var(--rule);
 }
 
 /* A dog-eared corner fold. */
@@ -318,7 +334,7 @@ button, input, select, textarea { font: inherit; color: inherit; }
   transition: transform 0.12s ease, box-shadow 0.12s ease;
 }
 .btn:active { transform: rotate(var(--tilt)) translate(2px, 2px); box-shadow: 1px 1px 0 rgba(43,41,37,.16); }
-.btn:disabled { opacity: 0.34; cursor: default; box-shadow: none; }
+.btn:disabled { opacity: 0.34; cursor: default; box-shadow: none; transform: none; }
 
 .btn-alt {
   background: none;
@@ -503,6 +519,7 @@ button, input, select, textarea { font: inherit; color: inherit; }
 }
 .shutter:active { transform: scale(0.93); }
 .shutter:disabled { opacity: 0.35; cursor: default; }
+.choice:disabled { opacity: 0.34; cursor: default; transform: none; box-shadow: none; }
 
 /* ----------------------------------------------------------- item rows */
 
@@ -549,3 +566,30 @@ button, input, select, textarea { font: inherit; color: inherit; }
   gap: 8px;
   align-items: end;
 }
+
+/* ------------------------------------------------------- small controls */
+
+/* Strike a line off the bill. Small, quiet, and unmistakably a delete. */
+.scratch {
+  border: none;
+  background: none;
+  color: var(--ink-3);
+  font-family: var(--ledger);
+  font-size: 1.05rem;
+  line-height: 1;
+  padding: 6px 4px;
+  cursor: pointer;
+}
+.scratch:hover:not(:disabled) { color: var(--warn); }
+.scratch:disabled { opacity: 0.25; cursor: default; }
+
+/* Doodles pinned in the margin. Decorative only, and the first thing to go
+   when a screen gets dense. */
+.doodle {
+  position: absolute;
+  color: var(--ink-3);
+  opacity: 0.5;
+  pointer-events: none;
+  user-select: none;
+}
+@media (max-width: 560px) { .doodle { display: none; } }

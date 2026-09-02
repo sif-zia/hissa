@@ -29,7 +29,7 @@ export function Head({
         </button>
       ) : null}
       {entry ? <div class="eyebrow">{entry}</div> : null}
-      <h1 style={tiltStyle(`h-${title}`, 0.22)} class="tilt">
+      <h1 style={tiltStyle(`h-${title}`, "page")} class="tilt">
         {title}
       </h1>
       {note ? <p class="scrawl dim" style={{ margin: 0 }}>{note}</p> : null}
