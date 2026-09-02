@@ -10,7 +10,7 @@ import { tiltStyle } from "../lib/tilt";
  * your own number pinned to the bottom so it never needs scrolling. Spec §2.7.
  */
 export function Split({
-  meta, people, me, mine, onTap, onBump, onToggleLeftovers, onShare, onRefresh,
+  meta, people, me, mine, onTap, onBump, onToggleLeftovers, onCopyLink, onCopyCode, onRefresh,
   live, refreshing, stale, error, onBack, onChangeName,
 }: {
   meta: BillMeta;
@@ -20,7 +20,8 @@ export function Split({
   onTap: (lineId: string) => void;
   onBump: (lineId: string, delta: number) => void;
   onToggleLeftovers: () => void;
-  onShare: () => void;
+  onCopyLink: () => void;
+  onCopyCode: () => void;
   onRefresh: () => void;
   live: boolean;
   refreshing: boolean;
@@ -53,13 +54,13 @@ export function Split({
         </div>
       </div>
 
-      <div style={{ display: "flex", gap: 8, marginBottom: 18, flexWrap: "wrap" }}>
-        <button class="tiny" onClick={onShare}>share the link</button>
-        <button class="tiny amt" onClick={onShare} aria-label={`Bill code ${meta.code}, tap to share`}>
-          {meta.code}
-        </button>
-        {stale ? <span class="tiny" style={{ borderStyle: "dotted", opacity: 0.7 }}>catching up…</span> : null}
-      </div>
+      <p style={{ marginBottom: 18 }}>
+        Copy{" "}
+        <button class="cta" onClick={onCopyLink}>link</button>
+        {" "}or{" "}
+        <button class="cta" onClick={onCopyCode} aria-label={`Copy the code, ${meta.code}`}>code</button>
+        {stale ? <span class="scrawl dim" style={{ marginLeft: 10 }}>catching up…</span> : null}
+      </p>
 
       <div class="lines">
         {meta.lines.map((line) => {

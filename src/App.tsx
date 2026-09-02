@@ -17,7 +17,7 @@ import type { Claims } from "./lib/split";
 import type { Shot } from "./lib/image";
 import { createBill, extract, fetchBill, putClaims, setSplitUnclaimed, ApiError } from "./lib/api";
 import { loadMe, saveMe, forgetMe, sweep } from "./lib/cache";
-import { share, buzz } from "./lib/share";
+import { share, copy, buzz } from "./lib/share";
 import { useBillSync } from "./hooks/useBillSync";
 
 type Screen = "home" | "camera" | "preview" | "editor" | "equal" | "start" | "join";
@@ -270,9 +270,12 @@ export function App() {
           onTap={tap}
           onBump={bump}
           onToggleLeftovers={toggleLeftovers}
-          onShare={async () => {
+          onCopyLink={async () => {
             const how = await share(sync.state!.meta.code, sync.state!.meta.billName);
             if (how !== "failed") flash(how === "shared" ? "shared" : "link copied");
+          }}
+          onCopyCode={async () => {
+            flash((await copy(sync.state!.meta.code)) ? `code copied · ${sync.state!.meta.code}` : `your code is ${sync.state!.meta.code}`);
           }}
           onRefresh={sync.refresh}
           live={sync.live}
