@@ -55,12 +55,19 @@ The free tier is fine for building on your own bills, but its content is used
 to improve Google's products. **Move to a paid key before any stranger uploads
 a receipt** — that is the upgrade trigger, not the rate limit.
 
+Optionally set `GEMINI_MODEL` to override the extraction model without a
+redeploy — useful when the current one is retired, which has already happened
+once (`gemini-2.5-flash` now refuses new keys).
+
 ### Redis
 
 ```sh
 vercel integration add upstash/upstash-kv   # accept the marketplace terms in the browser first
 vercel env pull .env.local                  # pulls the URL and token down
 ```
+
+Upstash serves single commands at the REST root and batches at `/multi-exec`.
+`api/_lib/redis.ts` handles both; posting a batch to the root fails.
 
 ## How it fits together
 
@@ -103,6 +110,11 @@ symbol, say).
 
 | | Budget | Actual |
 | --- | --- | --- |
-| App JS | 60 KB gz | 17 KB |
+| App JS | 60 KB gz | **17 KB** |
 | Landing critical path | — | ~6 KB gz + 35 KB font |
-| Fonts total | 45 KB | 64 KB — over; see `src/styles/fonts.css` |
+| Fonts total | 45 KB | **64 KB — over budget** (see `src/styles/fonts.css`) |
+| CLS | 0 | **0** — the rotations cost nothing |
+| Landing JS | 0 | **0** |
+
+Measured on the deployment: TTFB 73 ms, load complete 121 ms, 7 requests.
+Contrast passes WCAG AA throughout (lowest 4.85:1).

@@ -4,12 +4,29 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Status
 
-No application code exists yet. The repo holds two documents:
+Built and deployed. `context/hissa_spec.md` is the product spec (v0.2) and `context/hissa_mvp.jsx` a single-file artifact prototype kept as a reference for flow and maths — neither is the code.
 
-- `context/hissa_spec.md` — the product and technical spec (v0.2). Authoritative.
-- `context/hissa_mvp.jsx` — a single-file React prototype built as a Claude artifact. A working reference for flow, maths and density, **not** the design and not the target architecture.
+**Four places the shipped app deliberately departs from the spec.** Do not "fix" these back:
 
-Read the spec before building anything. When the two disagree, the spec wins; the prototype's deviations are documented as artifact-runtime constraints (§7 "Note on the MVP artifact", §8 "UI direction").
+| Spec says | Actually built | Why |
+| --- | --- | --- |
+| §9 "explicitly not Next.js", no SEO surface | Vite MPA: zero-JS static landing + `noindex` app | SEO became a requirement; the *app* still has nothing to index |
+| §10 Durable Object + WebSocket | ETag-gated polling on Vercel + Upstash Redis | 5s for the first hour, manual after; stale-first paint from `localStorage` |
+| §8 receipt-paper aesthetic | Handwritten-journal design language | Replaced wholesale on request |
+| §7.3 `gemini-2.5-flash`, `thinkingBudget: 0` | `gemini-3.1-flash-lite`, budget retried away on 400 | 2.5-flash now 404s for new keys; 3.6+ reject the argument |
+
+## Commands
+
+```sh
+pnpm dev      # client only, at /app.html
+pnpm test     # 79 unit tests
+pnpm build    # static build to dist/
+vercel dev    # adds /api (needs .env.local)
+```
+
+`vercel dev` does not emulate `vercel.json` rewrites reliably behind a framework dev command — `/s/CODE` is handled by a Vite middleware in `vite.config.ts` for dev and by the rewrite in production. Verify routing on a deployment, not on `vercel dev`.
+
+Environment: `GEMINI_API_KEY` (production only, server-side), `KV_REST_API_URL`/`_TOKEN` (from the Upstash integration). **Never prefix anything `VITE_`** — that inlines it into the public bundle; `tests/secrets.test.ts` enforces this.
 
 ## What Hissa is
 
@@ -17,13 +34,13 @@ Photograph a bill, tap what you ate, everyone sees their share. Mobile-first PWA
 
 Six screens: home → capture → preview → editor → (equal split | start → split), plus join. The editor is the only dense screen.
 
-## Target stack (spec §9, not yet scaffolded)
+## Stack
 
-Vite + React 19 + TypeScript, aliased to Preact via `preact/compat`; wouter for two routes (`/` and `/s/:code`); `useReducer` + one context for state; plain CSS with custom properties; `vite-plugin-pwa`. Server is Cloudflare Workers with **one Durable Object per bill code** holding `{meta, members, claims}`, a WebSocket per bill for live claim deltas, and a Worker route proxying Gemini for extraction.
+Vite (multi-page) + Preact via `preact/compat` + TypeScript; `wouter-preact` for `/s/:code`; plain CSS with custom properties; `vite-plugin-pwa`. API is Vercel Edge functions over Upstash Redis. Extraction proxies Gemini server-side.
 
-Explicitly rejected: Next.js, a utility CSS framework, TanStack Query, Zustand (until `useReducer` stops fitting), Tesseract, classical OCR.
+Still explicitly rejected: Next.js, a utility CSS framework, TanStack Query, Zustand, Tesseract, classical OCR.
 
-Budget: under 60 KB gzipped JS, first meaningful paint under 2s on 3G. This is a real constraint, not aspiration — check any dependency against it.
+Budget: app JS **17 KB gz** against a 60 KB ceiling; landing critical path ~6 KB gz plus a 35 KB font. Fonts total 64 KB — over the 45 KB target, and the one budget that is not met. Check any dependency against these.
 
 ## Invariants
 
@@ -55,6 +72,23 @@ The prototype calls Claude Sonnet instead, because that is the only endpoint ava
 
 Live `getUserMedia` viewfinder, `facingMode: { ideal: "environment" }`, `<video>` must be both `playsInline` and `muted` or iOS Safari goes fullscreen. The shutter draws the frame to a canvas and encodes straight to JPEG — the frame never becomes a file. Stop all tracks on leaving the screen and on unmount. `<input type="file" capture="environment">` is the fallback for `NotAllowedError` and for missing `getUserMedia`, never the primary path.
 
-## Prototype code that does not port
+## Things that bit, and now have tests
 
-`window.storage.get/set/list` is the artifact runtime's shared KV, and the 7-second poll in `hissa_mvp.jsx` exists only because that API has no push. Both are replaced by the Durable Object and its WebSocket; the poll survives only as a reconnect fallback. Likewise the `#s=CODE` hash link is a stand-in for the real `/s/<CODE>` route.
+Each of these was a real bug found by running the app, not a hypothetical:
+
+- **Joining wiped your claims.** Registering an empty record unconditionally erased what you had tapped. `doJoin` now reads before writing.
+- **Two owners of `mine`.** The join fetch and the poll both wrote local claims, so an in-flight poll clobbered the fresher answer. `adopted` ref in `App.tsx` settles ownership.
+- **Upstash batches** go to `/multi-exec`, not the base URL. Posting to the root fails with "unsupported arg type".
+- **`cleanUrls` 308s `/app.html` → `/app`**, so the rewrite target must be `/app` or the code in the URL is thrown away.
+- **The poll ran at ~2x.** Keying the timer effect on `state` tore it down on every arriving claim. It is keyed on the bill's open time now.
+- **Chip colours collided** — hash-to-palette put two people at a table on the same colour. `paletteFor` resolves collisions off a sorted key list so every device agrees.
+
+## Design language
+
+`src/styles/journal.css` is the whole aesthetic as tokens and primitives; screens compose from it and never invent a colour, shadow or rotation.
+
+- **Light is the default**, whatever the OS says. Dark is opt-in via the toggle (light → dark → follow-system), applied inline before first paint so static pages never flash.
+- **Rotation is deterministic** (`src/lib/tilt.ts`) and sized by element: `scrap` (−4°..+11°) for chips and stubs, `card` (−1.4°..+1.8°) for full-width blocks. A full-width card at 9° reads as a broken layout, not a hand-placed one.
+- **Dashed rules and input underlines are the brief**; dashed *boxes* are not. Small controls are paper with a hard offset shadow.
+- **Every money amount** is `.amt` (Courier Prime, tabular). Handwriting faces have no tabular figures, and spec §8 is emphatic that figures people compare must line up.
+- Everything flattens under `prefers-reduced-motion`.
