@@ -23,9 +23,9 @@ function requireConfig(): { url: string; token: string } {
   return { url: URL_, token: TOKEN };
 }
 
-async function send(body: unknown): Promise<unknown> {
+async function send(body: unknown, path = ""): Promise<unknown> {
   const { url, token } = requireConfig();
-  const res = await fetch(url, {
+  const res = await fetch(`${url}${path}`, {
     method: "POST",
     headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
     body: JSON.stringify(body),
@@ -43,11 +43,16 @@ export async function cmd<T = unknown>(...args: (string | number)[]): Promise<T>
 }
 
 /**
- * A pipeline. Writes always bundle HSET + HINCRBY v + EXPIRE so the version
- * can never drift out of step with the data it describes.
+ * A transaction. Writes bundle HSET + HINCRBY v + EXPIRE through MULTI/EXEC so
+ * the version can never drift out of step with the data it describes — a
+ * plain pipeline would let a crash land the data without the version bump.
+ *
+ * Note the path: Upstash serves single commands at the root and batches at
+ * /pipeline and /multi-exec. Posting a batch to the root fails with
+ * "unsupported arg type".
  */
 export async function pipeline<T = unknown[]>(cmds: (string | number)[][]): Promise<T> {
-  const out = (await send(cmds.map((c) => c.map(String)))) as { result: unknown; error?: string }[];
+  const out = (await send(cmds.map((c) => c.map(String)), "/multi-exec")) as { result: unknown; error?: string }[];
   const bad = out.find((r) => r.error);
   if (bad) throw new Error(`Redis: ${bad.error}`);
   return out.map((r) => r.result) as T;

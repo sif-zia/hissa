@@ -1,10 +1,28 @@
-import { defineConfig } from "vite";
+import { defineConfig, type Plugin } from "vite";
 import preact from "@preact/preset-vite";
 import { VitePWA } from "vite-plugin-pwa";
 import { resolve } from "node:path";
 
+/**
+ * Serve the app shell for deep links in dev, the way vercel.json rewrites do
+ * in production. Without it a fresh load of /s/CODE gets the landing page and
+ * every shared invite is broken.
+ */
+const deepLinks = (): Plugin => ({
+  name: "hissa-deep-links",
+  configureServer(server) {
+    server.middlewares.use((req, _res, next) => {
+      // /s/CODE is the deep link; /app is what vercel.json rewrites it to,
+      // and in dev only app.html exists on disk.
+      if (req.url && /^\/(s\/[^/?#]+|app)(\/|\?|$)/.test(req.url)) req.url = "/app.html";
+      next();
+    });
+  },
+});
+
 export default defineConfig({
   plugins: [
+    deepLinks(),
     preact(),
     VitePWA({
       registerType: "autoUpdate",
