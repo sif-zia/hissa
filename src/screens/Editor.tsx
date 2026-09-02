@@ -167,7 +167,7 @@ export function Editor({
 
       <hr class="rule-dash" />
 
-      <div class="sticky" style={tiltStyle("totals", "note")}>
+      <div class="sticky" style={tiltStyle("totals", "page")}>
         <div class="row"><span class="dim">subtotal</span><Amount value={money(t.subtotal)} /></div>
         {num(bill.gst) ? (
           <div class="row"><span class="dim">gst {bill.gst}%</span><Amount value={money(t.gstAmt)} /></div>

@@ -22,7 +22,7 @@ export function EqualSplit({
     <Sheet>
       <Head entry="entry no. 05" title="straight down the middle" onBack={onBack} />
 
-      <div class="sticky" style={tiltStyle("eq", "note")}>
+      <div class="sticky" style={tiltStyle("eq", "page")}>
         <div class="row"><span class="dim">the bill</span><Amount value={fmt(total, currency, true)} /></div>
       </div>
 
