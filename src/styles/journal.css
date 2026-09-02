@@ -57,33 +57,12 @@
   --tilt: 0deg;
 }
 
-/* Dark mode is a dim lamp over the same paper, not an inversion — people
-   split bills in restaurants at night. Spec §8. */
-@media (prefers-color-scheme: dark) {
-  :root:not([data-theme="light"]) {
-    color-scheme: dark;
-    --ground: #171512;
-    --paper: #211f1b;
-    --paper-2: #262320;
-    --paper-edge: #35312a;
-    --rule: rgba(226, 213, 184, 0.1);
-    --dot: rgba(226, 213, 184, 0.09);
-    --margin-line: rgba(198, 122, 138, 0.34);
-    --stain: rgba(226, 200, 140, 0.03);
-    --tape: rgba(226, 213, 184, 0.09);
-    --ink: #ece3cf;
-    --ink-2: #c3b99f;
-    --ink-3: #938b76;
-    --ink-line: rgba(236, 227, 207, 0.3);
-    --rose: #d2899a;
-    --sage: #93ac86;
-    --slate: #8299b8;
-    --warn: #d98177;
-    --shadow-hard: 3px 3px 0 rgba(0, 0, 0, 0.4);
-    --shadow-lift: 5px 6px 0 rgba(0, 0, 0, 0.36);
-  }
-}
-
+/*
+ * Light is the default, whatever the OS is set to — paper is the point, and a
+ * bill lands on a desk long before it lands in a dark restaurant. Dark is
+ * opt-in through the toggle, which writes data-theme, plus an explicit
+ * "follow my system" setting for people who want it.
+ */
 [data-theme="dark"] {
   color-scheme: dark;
   --ground: #171512;
@@ -105,6 +84,31 @@
   --warn: #d98177;
   --shadow-hard: 3px 3px 0 rgba(0, 0, 0, 0.4);
   --shadow-lift: 5px 6px 0 rgba(0, 0, 0, 0.36);
+}
+
+@media (prefers-color-scheme: dark) {
+  [data-theme="system"] {
+    color-scheme: dark;
+    --ground: #171512;
+    --paper: #211f1b;
+    --paper-2: #262320;
+    --paper-edge: #35312a;
+    --rule: rgba(226, 213, 184, 0.1);
+    --dot: rgba(226, 213, 184, 0.09);
+    --margin-line: rgba(198, 122, 138, 0.34);
+    --stain: rgba(226, 200, 140, 0.03);
+    --tape: rgba(226, 213, 184, 0.09);
+    --ink: #ece3cf;
+    --ink-2: #c3b99f;
+    --ink-3: #938b76;
+    --ink-line: rgba(236, 227, 207, 0.3);
+    --rose: #d2899a;
+    --sage: #93ac86;
+    --slate: #8299b8;
+    --warn: #d98177;
+    --shadow-hard: 3px 3px 0 rgba(0, 0, 0, 0.4);
+    --shadow-lift: 5px 6px 0 rgba(0, 0, 0, 0.36);
+  }
 }
 
 /* ------------------------------------------------------------------ base */
@@ -593,3 +597,22 @@ button, input, select, textarea { font: inherit; color: inherit; }
   user-select: none;
 }
 @media (max-width: 560px) { .doodle { display: none; } }
+
+/* Theme toggle: in the margin, out of the way of everything else. */
+.theme-toggle {
+  position: absolute;
+  top: 14px;
+  right: 12px;
+  z-index: 5;
+  width: 32px;
+  height: 32px;
+  border: 1.5px dashed var(--ink-line);
+  background: none;
+  color: var(--ink-3);
+  font-size: 15px;
+  line-height: 1;
+  cursor: pointer;
+  border-radius: 50%;
+  padding: 0;
+}
+.theme-toggle:hover { color: var(--ink); border-color: var(--ink-line); }

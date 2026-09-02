@@ -9,8 +9,7 @@
       content="Photograph a restaurant bill and Hissa reads the lines. Everyone taps what they ate and sees what they owe. No account, no install, no app store — share a four-letter code and split it at the table."
     />
     <link rel="canonical" href="https://hissa.itisamzia.dev/" />
-    <meta name="theme-color" content="#f3ecda" media="(prefers-color-scheme: light)" />
-    <meta name="theme-color" content="#211f1b" media="(prefers-color-scheme: dark)" />
+    <meta name="theme-color" content="#f3ecda" />
     <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
     <link rel="apple-touch-icon" href="/icons/icon-192.png" />
     <link rel="manifest" href="/manifest.webmanifest" />
@@ -50,6 +49,18 @@
           "Shared live split by four-letter code",
           "Works offline as an installable web app"
         ]
+      }
+    </script>
+    <script>
+      // Inline and before paint: a stored theme must not arrive after the
+      // first frame. This is the only script on these pages.
+      try {
+        document.documentElement.setAttribute(
+          "data-theme",
+          localStorage.getItem("hissa:theme") || "light",
+        );
+      } catch (e) {
+        document.documentElement.setAttribute("data-theme", "light");
       }
     </script>
   </head>

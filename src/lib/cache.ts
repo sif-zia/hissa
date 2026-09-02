@@ -43,6 +43,15 @@ function write(k: string, v: unknown): void {
 export const loadMe = (code: string): Identity | null => read<Identity>(key("me", code));
 export const saveMe = (code: string, me: Identity): void => write(key("me", code), me);
 
+/** Forget who this device is on a bill, without dropping the cached bill. */
+export function forgetMe(code: string): void {
+  try {
+    localStorage.removeItem(key("me", code));
+  } catch {
+    // nothing stored to forget
+  }
+}
+
 export const loadBill = (code: string): Cached | null => read<Cached>(key("bill", code));
 export const saveBill = (code: string, etag: string, state: BillState): void =>
   write(key("bill", code), { etag, state, at: Date.now() } satisfies Cached);

@@ -86,8 +86,12 @@ export function Capture({
         {!blocked ? (
           <button class="shutter" onClick={snap} disabled={camState !== "live"} aria-label="Take the photo" />
         ) : null}
-        <button class="link" onClick={() => fileRef.current?.click()}>
-          {blocked ? "open my camera" : "pick a photo instead"}
+        <button
+          class="btn btn-alt"
+          style={{ maxWidth: 280 }}
+          onClick={() => fileRef.current?.click()}
+        >
+          {blocked ? "open my camera" : "upload a photo instead"}
         </button>
         <input
           ref={fileRef}

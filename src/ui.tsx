@@ -1,14 +1,39 @@
 import type { ComponentChildren, JSX } from "preact";
-import { useEffect, useRef } from "preact/hooks";
+import { useEffect, useRef, useState } from "preact/hooks";
 import { tiltStyle } from "./lib/tilt";
+import { applyTheme, loadTheme, nextTheme, themeLabel, type Theme } from "./lib/theme";
 
 /** Shared stationery. Every screen builds from these, never from raw CSS. */
 
 export function Sheet({ children }: { children: ComponentChildren }) {
   return (
     <div class="paper">
-      <div class="sheet">{children}</div>
+      <div class="sheet">
+        <ThemeToggle />
+        {children}
+      </div>
     </div>
+  );
+}
+
+/**
+ * One small control, cycling light → dark → follow-system. Deliberately not a
+ * settings screen: Hissa has six screens and a code, and anything that cannot
+ * justify itself against "fewest steps to a number" does not ship.
+ */
+function ThemeToggle() {
+  const [theme, setTheme] = useState<Theme>(loadTheme);
+  useEffect(() => { applyTheme(theme); }, [theme]);
+  const title = theme === "system" ? "following your system" : theme;
+  return (
+    <button
+      class="theme-toggle"
+      onClick={() => setTheme(nextTheme(theme))}
+      title={`Theme: ${title}`}
+      aria-label={`Theme: ${title}. Tap to change.`}
+    >
+      {themeLabel(theme)}
+    </button>
   );
 }
 

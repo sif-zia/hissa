@@ -15,8 +15,8 @@ import { compute, type DraftBill } from "./lib/money";
 import { identityOf, uid, type Identity } from "./lib/identity";
 import type { Claims } from "./lib/split";
 import type { Shot } from "./lib/image";
-import { createBill, extract, putClaims, setSplitUnclaimed, ApiError } from "./lib/api";
-import { loadMe, saveMe, sweep } from "./lib/cache";
+import { createBill, extract, fetchBill, putClaims, setSplitUnclaimed, ApiError } from "./lib/api";
+import { loadMe, saveMe, forgetMe, sweep } from "./lib/cache";
 import { share, buzz } from "./lib/share";
 import { useBillSync } from "./hooks/useBillSync";
 
@@ -160,18 +160,36 @@ export function App() {
     setBusy(true);
     setErr("");
     try {
-      // Registering an empty claims record is also how the bill is proven to
-      // exist — a bad code fails here rather than on a blank split screen.
-      await putClaims(c, { name: who.name, slug: who.slug }, {});
+      // Read before writing. Registering an empty record unconditionally
+      // wiped the claims of anyone rejoining — which is exactly what this
+      // screen promises will not happen.
+      const res = await fetchBill(c);
+      const existing = res.changed
+        ? res.state.people.find((p) => p.key === who.key)
+        : undefined;
+      if (!existing) await putClaims(c, { name: who.name, slug: who.slug }, {});
+
       saveMe(c, who);
       setMe(who);
-      setMine({});
+      setMine(existing?.claims ?? {});
       setScreen("home");
       navigate(`/s/${c}`);
     } catch (e) {
       setErr(e instanceof ApiError ? e.message : `No split found with code ${c}.`);
     }
     setBusy(false);
+  };
+
+  /** "Not you?" — drop this device's identity and ask again. */
+  const changeName = () => {
+    if (!code) return;
+    forgetMe(code);
+    setMe(null);
+    setMine({});
+    setJoinCode(code);
+    setJoinName("");
+    setErr("");
+    setScreen("join");
   };
 
   /* --- claiming: optimistic, then reconciled ---------------------------- */
@@ -251,6 +269,7 @@ export function App() {
           stale={sync.stale}
           error={sync.error || err}
           onBack={goHome}
+          onChangeName={changeName}
         />
         <Toast message={toast} />
       </>

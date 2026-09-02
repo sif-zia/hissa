@@ -11,7 +11,7 @@ import { tiltStyle } from "../lib/tilt";
  */
 export function Split({
   meta, people, me, mine, onTap, onBump, onToggleLeftovers, onShare, onRefresh,
-  live, refreshing, stale, error, onBack,
+  live, refreshing, stale, error, onBack, onChangeName,
 }: {
   meta: BillMeta;
   people: Person[];
@@ -27,6 +27,7 @@ export function Split({
   stale: boolean;
   error: string;
   onBack: () => void;
+  onChangeName: () => void;
 }) {
   const cur = meta.currency;
   const money = (c: number) => fmt(c, cur, true);
@@ -129,7 +130,18 @@ export function Split({
                 }}
               />
               {p.name}
-              {p.key === me.key ? <span class="scrawl" style={{ color: "var(--rose)" }}> ← you</span> : null}
+              {p.key === me.key ? (
+                <>
+                  <span class="scrawl" style={{ color: "var(--rose)" }}> ← you</span>
+                  <button
+                    class="link"
+                    style={{ fontSize: "0.95rem", marginLeft: 10 }}
+                    onClick={onChangeName}
+                  >
+                    not {me.name}?
+                  </button>
+                </>
+              ) : null}
             </span>
             <Amount value={money(shareOf(meta, subShare[p.key] ?? 0))} dim={p.key !== me.key} />
           </div>
