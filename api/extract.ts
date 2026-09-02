@@ -10,8 +10,19 @@ import { cmd } from "./_lib/redis";
 
 export const config = { runtime: "edge" };
 
-const MODEL = "gemini-2.5-flash";
-const ENDPOINT = `https://generativelanguage.googleapis.com/v1beta/models/${MODEL}:generateContent`;
+/**
+ * Overridable without a redeploy, because models get retired: the spec's
+ * gemini-2.5-flash stopped accepting new users, which is exactly the failure
+ * a hardcoded name turns into a 502 for everyone.
+ *
+ * 3.1-flash-lite is the spec's named launch model ($0.25/$1.50 per MTok) and
+ * still honours thinkingBudget:0 — the 3.6+ models reject that argument
+ * outright and bill their thinking as output, which is the one way to make
+ * receipt extraction unexpectedly expensive.
+ */
+const MODEL = process.env.GEMINI_MODEL ?? "gemini-3.1-flash-lite";
+const endpointFor = (model: string) =>
+  `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`;
 
 /** A 1400px JPEG at q0.75 lands around 200 KB; 1.5 MB is a generous ceiling. */
 const MAX_BYTES = 1_500_000;
@@ -76,29 +87,35 @@ export default handler(async (req) => {
 
   await throttle(req);
 
-  const res = await fetch(`${ENDPOINT}?key=${key}`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      contents: [{
-        parts: [
-          { inline_data: { mime_type: "image/jpeg", data: image } },
-          { text: PROMPT },
-        ],
-      }],
-      generationConfig: {
-        responseMimeType: "application/json",
-        responseSchema: SCHEMA,
-        // Thinking tokens bill as output at five times the input rate, and
-        // reading a receipt needs no reasoning budget. Spec §7.3.
-        thinkingConfig: { thinkingBudget: 0 },
-        temperature: 0,
-      },
-    }),
-  });
+  const call = (withThinkingBudget: boolean) =>
+    fetch(`${endpointFor(MODEL)}?key=${key}`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        contents: [{
+          parts: [
+            { inline_data: { mime_type: "image/jpeg", data: image } },
+            { text: PROMPT },
+          ],
+        }],
+        generationConfig: {
+          responseMimeType: "application/json",
+          responseSchema: SCHEMA,
+          // Thinking tokens bill as output at several times the input rate,
+          // and reading a receipt needs no reasoning budget. Spec §7.3.
+          ...(withThinkingBudget ? { thinkingConfig: { thinkingBudget: 0 } } : {}),
+          temperature: 0,
+        },
+      }),
+    });
+
+  let res = await call(true);
+  // Newer models reject thinkingBudget outright rather than ignoring it. Retry
+  // once without it so swapping GEMINI_MODEL forward never needs a code change.
+  if (res.status === 400) res = await call(false);
 
   if (!res.ok) {
-    console.error("gemini", res.status, (await res.text()).slice(0, 300));
+    console.error("gemini", MODEL, res.status, (await res.text()).slice(0, 300));
     throw new HttpError("Could not read that bill.", 502);
   }
 
