@@ -236,8 +236,6 @@ body {
 }
 
 .note { font-family: var(--scrawl); font-size: 1.15em; color: var(--rose); }
-.note-sage { color: var(--sage); }
-.note-slate { color: var(--slate); }
 
 /* Left visible on purpose. */
 .strike { text-decoration: line-through; text-decoration-thickness: 1.5px; color: var(--ink-3); }
@@ -437,15 +435,19 @@ button, input, select, textarea { font: inherit; color: inherit; }
 .bar-in { max-width: 560px; margin-inline: auto; display: flex; justify-content: space-between; align-items: center; gap: var(--gap); }
 .bar .amt { color: var(--paper); }
 
+/* On the inked bar: a chip of paper, so it reads as pressable against dark. */
 .ghost {
-  background: none;
-  border: 1.5px dashed rgba(243, 236, 218, 0.4);
+  background: rgba(243, 236, 218, 0.12);
+  border: 1px solid rgba(243, 236, 218, 0.3);
   color: var(--paper);
-  padding: 7px 12px;
+  padding: 7px 13px;
   font-size: var(--step--1);
   font-family: var(--hand);
   cursor: pointer;
+  transition: background 0.12s ease;
 }
+.ghost:hover:not(:disabled) { background: rgba(243, 236, 218, 0.22); }
+.ghost:disabled { opacity: 0.5; cursor: default; }
 
 .chip {
   display: inline-flex;
@@ -614,16 +616,18 @@ button, input, select, textarea { font: inherit; color: inherit; }
   z-index: 5;
   width: 32px;
   height: 32px;
-  border: 1.5px dashed var(--ink-line);
-  background: none;
+  border: 1px solid var(--paper-edge);
+  background: var(--paper-2);
   color: var(--ink-3);
   font-size: 15px;
   line-height: 1;
   cursor: pointer;
   border-radius: 50%;
   padding: 0;
+  box-shadow: 2px 2px 0 rgba(43, 41, 37, 0.12);
 }
-.theme-toggle:hover { color: var(--ink); border-color: var(--ink-line); }
+.theme-toggle:hover { color: var(--ink); }
+.theme-toggle:active { transform: translate(1px, 1px); box-shadow: 1px 1px 0 rgba(43, 41, 37, 0.12); }
 
 /* An inline call to action inside a sentence: reads as a word, works as a
    button. Used for "Copy link or code", where the sentence is the control. */
