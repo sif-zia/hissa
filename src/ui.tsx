@@ -89,7 +89,14 @@ export function Underline({ children }: { children: ComponentChildren }) {
     <span class="underline-draw" ref={ref}>
       {children}
       <svg viewBox="0 0 200 12" preserveAspectRatio="none" aria-hidden="true">
-        <path d="M2 8 C 40 3, 70 10, 104 6 S 168 3, 198 7" style={{ "--len": 210 }} />
+        {/* Non-scaling stroke: preserveAspectRatio="none" squashes the
+            viewBox horizontally, which would otherwise thin the line to a
+            hairline on a short word. */}
+        <path
+          d="M2 8 C 40 3, 70 10, 104 6 S 168 3, 198 7"
+          vector-effect="non-scaling-stroke"
+          style={{ "--len": 210 }}
+        />
       </svg>
     </span>
   );

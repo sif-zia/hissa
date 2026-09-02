@@ -305,7 +305,7 @@ p { margin: 0 0 0.85em; }
 .underline-draw path {
   fill: none;
   stroke: var(--rose);
-  stroke-width: 3;
+  stroke-width: 2.5;
   stroke-linecap: round;
   stroke-dasharray: var(--len, 300);
   stroke-dashoffset: var(--len, 300);
