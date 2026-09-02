@@ -36,19 +36,21 @@ export function Home({
       </div>
 
       {recent.length ? (
-        <div style={{ marginTop: 30 }}>
-          <p class="scrawl dim" style={{ margin: "0 0 6px" }}>
+        <div style={{ marginTop: 34 }}>
+          <p class="scrawl dim" style={{ margin: "0 0 12px" }}>
             <Underline>still open</Underline>
           </p>
-          <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+          <div style={{ display: "flex", gap: 14, flexWrap: "wrap" }}>
             {recent.map((c) => (
               <button
                 key={c}
-                class="tiny amt"
-                style={tiltStyle(`r-${c}`, "scrap")}
+                class="stub"
+                style={tiltStyle(`r-${c}`, "note")}
                 onClick={() => onResume(c)}
+                aria-label={`Reopen the split with code ${c}`}
               >
                 {c}
+                <span>&rarr;</span>
               </button>
             ))}
           </div>

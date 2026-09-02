@@ -341,12 +341,11 @@ button, input, select, textarea { font: inherit; color: inherit; }
 .btn:disabled { opacity: 0.34; cursor: default; box-shadow: none; transform: none; }
 
 .btn-alt {
-  background: none;
+  background: var(--paper-2);
   color: var(--ink);
-  border: 1.5px dashed var(--ink-line);
-  box-shadow: none;
+  border: 1px solid var(--paper-edge);
+  box-shadow: var(--shadow-hard);
 }
-.btn-alt:active { box-shadow: none; }
 
 /* A card-shaped choice: sticky note, hard shadow, no blur. */
 .choice {
@@ -366,15 +365,24 @@ button, input, select, textarea { font: inherit; color: inherit; }
 .choice b { display: block; font-size: var(--step-1); margin-bottom: 2px; }
 
 .tiny {
-  border: 1.5px dashed var(--ink-line);
-  background: none;
+  border: 1px solid var(--paper-edge);
+  background: var(--paper-2);
   color: var(--ink-2);
-  padding: 5px 10px;
+  padding: 5px 11px;
   font-size: var(--step--1);
   font-family: var(--hand);
   cursor: pointer;
+  box-shadow: 2px 2px 0 rgba(43, 41, 37, 0.13);
+  transition: transform 0.1s ease, box-shadow 0.1s ease;
 }
-.tiny.on { background: var(--ink); color: var(--paper); border-style: solid; border-color: var(--ink); }
+.tiny:hover { color: var(--ink); }
+.tiny:active { transform: translate(1px, 1px); box-shadow: 1px 1px 0 rgba(43, 41, 37, 0.13); }
+.tiny.on {
+  background: var(--ink);
+  color: var(--paper);
+  border-color: var(--ink);
+  box-shadow: 2px 2px 0 rgba(43, 41, 37, 0.22);
+}
 
 .link {
   background: none;
@@ -634,3 +642,44 @@ button, input, select, textarea { font: inherit; color: inherit; }
 }
 .cta:hover { color: var(--rose); }
 .cta:active { text-underline-offset: 1px; }
+
+/* ------------------------------------------------------- ticket stubs */
+
+/*
+ * A bill you are still on: a torn-off ticket stub with the code stamped on it.
+ * Paper and a hard shadow, not an outline — the codes are objects you pick up
+ * again, so they should look like something left on the desk.
+ */
+.stub {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 7px 13px 7px 16px;
+  border: 1px solid var(--paper-edge);
+  background: var(--paper-2);
+  box-shadow: var(--shadow-hard);
+  cursor: pointer;
+  font-family: var(--ledger);
+  font-size: var(--step-0);
+  font-weight: 700;
+  letter-spacing: 0.09em;
+  color: var(--ink);
+  transform: rotate(var(--tilt));
+  transition: transform 0.14s ease, box-shadow 0.14s ease;
+}
+/* The torn edge it was ripped from. */
+.stub::before {
+  content: "";
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: 5px;
+  background: repeating-linear-gradient(
+    to bottom,
+    var(--paper-edge) 0 3px,
+    transparent 3px 7px
+  );
+}
+.stub:hover { transform: rotate(var(--tilt)) translate(-1px, -2px); box-shadow: var(--shadow-lift); }
+.stub:active { transform: rotate(var(--tilt)) translate(2px, 2px); box-shadow: 1px 1px 0 rgba(43, 41, 37, 0.14); }
+.stub span { font-family: var(--scrawl); font-weight: 400; font-size: 1.05em; color: var(--ink-3); letter-spacing: 0; }
