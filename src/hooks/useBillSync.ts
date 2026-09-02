@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "preact/hooks";
 import { fetchBill, ApiError } from "../lib/api";
 import { loadBill, saveBill, type BillState } from "../lib/cache";
+import { isLive, msLeft, nextBackoff, waitFor, MAX_BACKOFF_MS } from "../lib/sync-window";
 
 /**
  * Live-ish state for one bill.
@@ -12,9 +13,6 @@ import { loadBill, saveBill, type BillState } from "../lib/cache";
  * immediately instead of a spinner.
  */
 
-const POLL_MS = 5_000;
-const LIVE_WINDOW_MS = 60 * 60 * 1000;
-const MAX_BACKOFF_MS = 60_000;
 
 export interface Sync {
   state: BillState | null;
@@ -71,7 +69,7 @@ export function useBillSync(code: string | null): Sync {
           backoff.current = MAX_BACKOFF_MS; // stop hammering a bill that is gone
         } else {
           setError("Lost touch with the split. It will retry.");
-          backoff.current = Math.min(backoff.current ? backoff.current * 2 : POLL_MS, MAX_BACKOFF_MS);
+          backoff.current = nextBackoff(backoff.current);
         }
       } finally {
         inFlight.current = false;
@@ -86,32 +84,45 @@ export function useBillSync(code: string | null): Sync {
     if (code) void pull(false);
   }, [code, pull]);
 
+  /*
+   * One self-scheduling chain, deliberately NOT keyed on `state`. Keying it on
+   * state meant every arriving claim tore the timer down and started a new
+   * one, so the real interval drifted to roughly half the stated 5s — twice
+   * the requests and twice the battery for no extra freshness.
+   */
+  const openedAt = state?.meta.at;
   useEffect(() => {
-    if (!code || !state) return undefined;
+    if (!code || openedAt === undefined) return undefined;
 
-    const elapsed = Date.now() - state.meta.at;
-    if (elapsed >= LIVE_WINDOW_MS) {
+    let cancelled = false;
+    let timer = 0;
+
+    const remaining = () => msLeft(openedAt, Date.now());
+
+    if (!isLive(openedAt, Date.now())) {
       setLive(false);
       return undefined;
     }
     setLive(true);
 
-    let timer = 0;
     const tick = () => {
-      // A backgrounded tab is not a table settling up; skip and wait.
+      if (cancelled) return;
+      if (remaining() <= 0) {
+        setLive(false);
+        return;
+      }
+      // A backgrounded tab is not a table settling up. Skip, and let the
+      // visibilitychange listener catch up when they come back.
       if (document.visibilityState === "visible") void pull(false);
-      const wait = backoff.current || POLL_MS;
-      timer = window.setTimeout(tick, wait);
+      timer = window.setTimeout(tick, waitFor(backoff.current));
     };
-    timer = window.setTimeout(tick, backoff.current || POLL_MS);
+    timer = window.setTimeout(tick, waitFor(backoff.current));
 
-    // Stop polling once the live window closes, without waiting for a render.
-    const stop = window.setTimeout(() => setLive(false), LIVE_WINDOW_MS - elapsed);
     return () => {
+      cancelled = true;
       clearTimeout(timer);
-      clearTimeout(stop);
     };
-  }, [code, state, pull]);
+  }, [code, openedAt, pull]);
 
   // Coming back to the tab is a good moment to catch up, live window or not.
   useEffect(() => {
