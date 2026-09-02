@@ -1,0 +1,197 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <title>How Hissa splits a bill — the maths, the privacy, the limits</title>
+    <meta
+      name="description"
+      content="How Hissa reads a receipt photo, how claiming by portions works, how tax and tip are apportioned, what happens to your photo, and what the four-letter code can and cannot do."
+    />
+    <link rel="canonical" href="https://hissa.itisamzia.dev/how-it-works" />
+    <meta name="theme-color" content="#f3ecda" media="(prefers-color-scheme: light)" />
+    <meta name="theme-color" content="#211f1b" media="(prefers-color-scheme: dark)" />
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+    <link rel="manifest" href="/manifest.webmanifest" />
+
+    <meta property="og:type" content="article" />
+    <meta property="og:url" content="https://hissa.itisamzia.dev/how-it-works" />
+    <meta property="og:title" content="How Hissa splits a bill" />
+    <meta property="og:description" content="The maths, the privacy, and the honest limits." />
+    <meta property="og:image" content="https://hissa.itisamzia.dev/og.png" />
+    <meta name="twitter:card" content="summary_large_image" />
+
+    <link rel="preload" href="/fonts/hissa-hand.woff2" as="font" type="font/woff2" crossorigin />
+    <link rel="stylesheet" href="/src/styles/fonts.css" />
+    <link rel="stylesheet" href="/src/styles/journal.css" />
+
+    <script type="application/ld+json">
+      {
+        "@context": "https://schema.org",
+        "@type": "FAQPage",
+        "mainEntity": [
+          {
+            "@type": "Question",
+            "name": "Do I need an account to split a bill?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "No. Hissa has no accounts, no login and no install. You are identified by the name you type, and the split is shared with a four-letter code."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "What happens to the photo of my receipt?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "It is resized on your phone, sent once to a vision model to read the lines, and discarded. Hissa never stores the image; only the parsed lines are kept, and those expire after 24 hours."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "How does Hissa split a dish that two people shared?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Claiming is by portion rather than by person. Tap a line once for one portion and tap the stepper up for more. The line's cost is divided by the total portions claimed on it, so someone who had two servings pays for two."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "How are tax and tip divided?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Proportionally. Your share of the subtotal is scaled up to the final total, so GST, discount and tip ride along with what you actually ordered. You never pay tip on someone else's steak."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "What happens to items nobody claims?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "They stay visible as an unclaimed total. Any member can turn on 'share leftovers', which divides them equally among everyone who claimed at least one item."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "How long does a split last?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Twenty-four hours. After that the code stops working and the bill is deleted."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "Can Hissa handle currencies other than rupees?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Yes. The currency is read off the bill and can be edited by hand. Hissa does not convert between currencies; one split is in one currency."
+            }
+          }
+        ]
+      }
+    </script>
+  </head>
+
+  <body>
+    <div class="paper">
+      <main class="sheet" style="padding-bottom: 60px">
+        <header style="margin-bottom: 30px">
+          <a class="link" href="/">&larr; back</a>
+          <div class="eyebrow" style="margin-top: 14px">entry no. 02 &middot; the longer version</div>
+          <h1 class="tilt" style="--tilt: 1.2deg; margin-top: 6px">how it actually works</h1>
+        </header>
+
+        <section>
+          <h2 class="tilt" style="--tilt: -0.9deg">reading the bill</h2>
+          <div class="prose">
+            <p>
+              the photo is shrunk on your phone before it goes anywhere &mdash; long side 1,400
+              pixels, which is enough to read thermal print and a tenth of the cost of sending the
+              raw camera file. it goes to a vision model once, comes back as lines, and is thrown
+              away. nothing keeps the image.
+            </p>
+            <p>
+              then hissa makes you look at it. the model is good, not perfect, and one wrong digit
+              becomes a real argument at the table. correcting three fields is cheap; disputing a
+              settled bill is not.
+            </p>
+          </div>
+          <p class="field-note scrawl" data-label="learned" style="color: var(--sage)">
+            when the lines don't add up to the printed subtotal, hissa says so instead of pretending.
+          </p>
+        </section>
+
+        <hr class="rule-dash" style="margin: 30px 0" />
+
+        <section>
+          <h2 class="tilt" style="--tilt: 0.5deg">claiming by portion</h2>
+          <div class="prose">
+            <p>
+              a line for seven wraps at 6,790 tapped by seven people is 970 each. tapped by two
+              people where one had two wraps, it's split by portions, not heads.
+            </p>
+            <p>
+              rounding always resolves: the last claimer on a line absorbs the remainder, so the
+              parts add back to exactly what was printed. a group can't accidentally under-cover a
+              line, whoever tapped it.
+            </p>
+          </div>
+        </section>
+
+        <hr class="rule-dash" style="margin: 30px 0" />
+
+        <section>
+          <h2 class="tilt" style="--tilt: -0.6deg">tax, discount, tip</h2>
+          <div class="prose">
+            <p>
+              gst applies to the subtotal. discount and tip both apply after gst. your own number is
+              your share of the subtotal, scaled up to the final total &mdash; so everything rides
+              along in proportion to what you ordered.
+            </p>
+          </div>
+        </section>
+
+        <hr class="rule-dash" style="margin: 30px 0" />
+
+        <section>
+          <h2 class="tilt" style="--tilt: 0.9deg">who you are</h2>
+          <div class="prose">
+            <p>
+              your name, lowercased and trimmed. <em>Faraz</em>, <em>faraz</em> and
+              <em>&nbsp;FARAZ&nbsp;</em> are one person, which is what makes rejoining from a second
+              phone or after a refresh free.
+            </p>
+            <p>
+              the catch is honest and visible: two real people called faraz at the same table will
+              land on one record, and you'll see it happen rather than find out later.
+            </p>
+          </div>
+        </section>
+
+        <hr class="rule-dash" style="margin: 30px 0" />
+
+        <section>
+          <h2 class="tilt" style="--tilt: -1.3deg">what the code can and can't do</h2>
+          <p class="field-note" data-label="can">
+            let anyone at the table open the split and claim their own items.
+          </p>
+          <p class="field-note" data-label="can't">
+            keep out someone who has the code. treat it like the bill itself &mdash; it's on the
+            table, not in a safe.
+          </p>
+          <p class="field-note" data-label="expires">
+            twenty-four hours, then the code stops working and the bill is gone.
+          </p>
+          <p class="field-note" data-label="frozen">
+            once a split is open the bill can't be edited. a forgotten item means a second split.
+          </p>
+        </section>
+
+        <div style="margin-top: 40px">
+          <a class="btn" href="/app.html" style="--tilt: -0.8deg; text-align: center; text-decoration: none">
+            split a bill &rarr;
+          </a>
+        </div>
+      </main>
+    </div>
+  </body>
+</html>

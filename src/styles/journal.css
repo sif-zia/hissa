@@ -1,0 +1,551 @@
+/*
+ * Hissa design language — a sheet of aged notebook paper, not a screen.
+ *
+ * Everything downstream composes from this file. No screen invents a colour,
+ * a shadow or a rotation of its own. Rule of restraint: decoration density
+ * falls as information density rises — doodles and stickers belong on the
+ * landing page and Home, never on the Editor or Split screens where a number
+ * is the thing the user came for.
+ */
+
+/* ---------------------------------------------------------------- tokens */
+
+:root {
+  color-scheme: light;
+
+  /* paper */
+  --paper: #f3ecda;
+  --paper-2: #efe6d0;
+  --paper-edge: #e2d7bd;
+  --rule: rgba(120, 106, 84, 0.16);
+  --dot: rgba(120, 106, 84, 0.13);
+  --margin-line: rgba(198, 122, 138, 0.42);
+  --stain: rgba(150, 122, 72, 0.05);
+
+  /* ink */
+  --ink: #2b2925;
+  --ink-2: #55503f;
+  --ink-3: #837b66;
+  --ink-line: rgba(43, 41, 37, 0.32);
+
+  /* three desaturated accents — annotation only, never fills */
+  --rose: #b4697c;
+  --sage: #6f8a63;
+  --slate: #5a7191;
+
+  --warn: #a4483f;
+
+  /* type */
+  --hand: "Shantell Sans", "Comic Sans MS", ui-rounded, system-ui, sans-serif;
+  --scrawl: "Caveat", "Segoe Script", cursive;
+  --ledger: "Courier Prime", ui-monospace, "SF Mono", Menlo, monospace;
+
+  --step--1: clamp(0.78rem, 0.76rem + 0.1vw, 0.84rem);
+  --step-0: clamp(0.95rem, 0.92rem + 0.16vw, 1.05rem);
+  --step-1: clamp(1.15rem, 1.08rem + 0.35vw, 1.35rem);
+  --step-2: clamp(1.45rem, 1.3rem + 0.7vw, 1.9rem);
+  --step-3: clamp(1.9rem, 1.6rem + 1.4vw, 2.8rem);
+
+  /* the notebook's ruling pitch — everything vertical is a multiple */
+  --line-pitch: 32px;
+  --gap: 12px;
+  --pad: 20px;
+  --shadow-hard: 3px 3px 0 rgba(43, 41, 37, 0.16);
+  --shadow-lift: 5px 6px 0 rgba(43, 41, 37, 0.14);
+  --tilt: 0deg;
+}
+
+/* Dark mode is a dim lamp over the same paper, not an inversion — people
+   split bills in restaurants at night. Spec §8. */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    color-scheme: dark;
+    --paper: #211f1b;
+    --paper-2: #262320;
+    --paper-edge: #35312a;
+    --rule: rgba(226, 213, 184, 0.1);
+    --dot: rgba(226, 213, 184, 0.09);
+    --margin-line: rgba(198, 122, 138, 0.34);
+    --stain: rgba(226, 200, 140, 0.03);
+    --ink: #ece3cf;
+    --ink-2: #c3b99f;
+    --ink-3: #938b76;
+    --ink-line: rgba(236, 227, 207, 0.3);
+    --rose: #d2899a;
+    --sage: #93ac86;
+    --slate: #8299b8;
+    --warn: #d98177;
+    --shadow-hard: 3px 3px 0 rgba(0, 0, 0, 0.4);
+    --shadow-lift: 5px 6px 0 rgba(0, 0, 0, 0.36);
+  }
+}
+
+[data-theme="dark"] {
+  color-scheme: dark;
+  --paper: #211f1b;
+  --paper-2: #262320;
+  --paper-edge: #35312a;
+  --rule: rgba(226, 213, 184, 0.1);
+  --dot: rgba(226, 213, 184, 0.09);
+  --margin-line: rgba(198, 122, 138, 0.34);
+  --stain: rgba(226, 200, 140, 0.03);
+  --ink: #ece3cf;
+  --ink-2: #c3b99f;
+  --ink-3: #938b76;
+  --ink-line: rgba(236, 227, 207, 0.3);
+  --rose: #d2899a;
+  --sage: #93ac86;
+  --slate: #8299b8;
+  --warn: #d98177;
+  --shadow-hard: 3px 3px 0 rgba(0, 0, 0, 0.4);
+  --shadow-lift: 5px 6px 0 rgba(0, 0, 0, 0.36);
+}
+
+/* ------------------------------------------------------------------ base */
+
+*, *::before, *::after { box-sizing: border-box; }
+
+html { -webkit-text-size-adjust: 100%; }
+
+body {
+  margin: 0;
+  /* Rotated children must never be able to push the page sideways. */
+  overflow-x: hidden;
+  background: var(--paper);
+  color: var(--ink);
+  font-family: var(--hand);
+  font-size: var(--step-0);
+  line-height: 1.55;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+/* --------------------------------------------------------------- surface */
+
+/*
+ * The paper itself: ruled lines at the pitch, a faint dot grid, one pink
+ * margin rule and two soft age stains. All gradients — zero image requests.
+ */
+.paper {
+  position: relative;
+  background-color: var(--paper);
+  background-image:
+    radial-gradient(ellipse 60% 40% at 82% 12%, var(--stain), transparent 70%),
+    radial-gradient(ellipse 50% 35% at 12% 88%, var(--stain), transparent 70%),
+    linear-gradient(var(--margin-line), var(--margin-line)),
+    repeating-linear-gradient(to bottom, transparent 0 calc(var(--line-pitch) - 1px), var(--rule) calc(var(--line-pitch) - 1px) var(--line-pitch)),
+    radial-gradient(var(--dot) 0.9px, transparent 0.9px);
+  background-size: 100% 100%, 100% 100%, 1.5px 100%, 100% 100%, 16px 16px;
+  background-position: 0 0, 0 0, 40px 0, 0 0, 4px 4px;
+  background-repeat: no-repeat, no-repeat, no-repeat, repeat, repeat;
+  background-attachment: local;
+}
+
+/* Narrow screens lose the margin rule — 40px of gutter is a real cost on a
+   360px phone and the ruling alone still reads as paper. */
+@media (max-width: 460px) {
+  .paper { background-image:
+    radial-gradient(ellipse 60% 40% at 82% 12%, var(--stain), transparent 70%),
+    radial-gradient(ellipse 50% 35% at 12% 88%, var(--stain), transparent 70%),
+    repeating-linear-gradient(to bottom, transparent 0 calc(var(--line-pitch) - 1px), var(--rule) calc(var(--line-pitch) - 1px) var(--line-pitch)),
+    radial-gradient(var(--dot) 0.9px, transparent 0.9px);
+    background-size: 100% 100%, 100% 100%, 100% 100%, 16px 16px;
+    background-position: 0 0, 0 0, 0 0, 4px 4px;
+    background-repeat: no-repeat, no-repeat, repeat, repeat;
+  }
+}
+
+.sheet {
+  max-width: 560px;
+  margin-inline: auto;
+  min-height: 100dvh;
+  padding: var(--pad) var(--pad) calc(140px + env(safe-area-inset-bottom));
+}
+
+/* ------------------------------------------------------------ stationery */
+
+/* Rotation is opt-in per element and always deterministic. */
+.tilt { transform: rotate(var(--tilt)); }
+
+.sticky {
+  background: var(--paper-2);
+  border: 1px solid var(--paper-edge);
+  box-shadow: var(--shadow-hard);
+  padding: 14px 16px;
+  transform: rotate(var(--tilt));
+}
+
+.dashed { border: 1.5px dashed var(--ink-line); background: none; }
+
+.rule-dash {
+  border: none;
+  border-top: 1.5px dashed var(--ink-line);
+  margin: var(--gap) 0;
+}
+
+.tape {
+  position: relative;
+}
+.tape::before {
+  content: "";
+  position: absolute;
+  top: -9px; left: 50%;
+  width: 78px; height: 18px;
+  transform: translateX(-50%) rotate(-2.5deg);
+  background: rgba(226, 213, 184, 0.55);
+  border-inline: 1px dashed rgba(120, 106, 84, 0.2);
+}
+
+/* A dog-eared corner fold. */
+.dogear { position: relative; }
+.dogear::after {
+  content: "";
+  position: absolute;
+  right: 0; bottom: 0;
+  border-width: 0 0 18px 18px;
+  border-style: solid;
+  border-color: transparent transparent var(--paper) transparent;
+  filter: drop-shadow(-1px -1px 0 var(--paper-edge));
+}
+
+.scrawl {
+  font-family: var(--scrawl);
+  font-size: 1.22em;
+  line-height: 1.25;
+  color: var(--ink-2);
+}
+
+.note { font-family: var(--scrawl); font-size: 1.15em; color: var(--rose); }
+.note-sage { color: var(--sage); }
+.note-slate { color: var(--slate); }
+
+/* Left visible on purpose. */
+.strike { text-decoration: line-through; text-decoration-thickness: 1.5px; color: var(--ink-3); }
+
+/* Arrow-led journal fields: "why →", "problem →". */
+.field-note::before { content: attr(data-label) " → "; color: var(--ink-3); font-family: var(--hand); }
+
+/* --------------------------------------------------------------- ledger */
+
+/*
+ * Every money amount. Monospace, so tabular by construction — handwriting
+ * faces have no tabular figures, and spec §8 is emphatic that amounts people
+ * scan down a column must line up. Names are handwritten; figures are entered
+ * in the ledger column.
+ */
+.amt {
+  font-family: var(--ledger);
+  font-variant-numeric: tabular-nums lining-nums;
+  font-feature-settings: "tnum" 1;
+  letter-spacing: -0.02em;
+  white-space: nowrap;
+}
+.amt-lg { font-size: var(--step-3); font-weight: 700; letter-spacing: -0.04em; }
+.amt-md { font-size: var(--step-1); font-weight: 700; }
+.amt-dim { color: var(--ink-3); }
+
+/* ------------------------------------------------------------ typography */
+
+h1, h2, h3 {
+  font-family: var(--hand);
+  font-weight: 700;
+  line-height: 1.15;
+  margin: 0 0 0.4em;
+  letter-spacing: -0.015em;
+}
+h1 { font-size: var(--step-3); }
+h2 { font-size: var(--step-2); }
+h3 { font-size: var(--step-1); }
+
+p { margin: 0 0 0.85em; }
+
+/* The aesthetic only survives short chunked copy. Long-form blocks loosen the
+   line-height and drop to a cleaner, lighter setting. */
+.prose { max-width: 62ch; line-height: 1.85; font-weight: 350; }
+.prose p { margin-bottom: 1.2em; }
+
+.eyebrow {
+  font-family: var(--ledger);
+  font-size: var(--step--1);
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--ink-3);
+}
+
+.dim { color: var(--ink-3); }
+.small { font-size: var(--step--1); }
+
+/* Hand-drawn underline that draws itself in when scrolled to. */
+.underline-draw { position: relative; display: inline-block; }
+.underline-draw > svg {
+  position: absolute;
+  left: -2%; bottom: -0.42em;
+  width: 104%; height: 0.5em;
+  overflow: visible;
+  pointer-events: none;
+}
+.underline-draw path {
+  fill: none;
+  stroke: var(--rose);
+  stroke-width: 3;
+  stroke-linecap: round;
+  stroke-dasharray: var(--len, 300);
+  stroke-dashoffset: var(--len, 300);
+}
+.underline-draw.drawn path {
+  transition: stroke-dashoffset 0.7s cubic-bezier(0.4, 0, 0.2, 1);
+  stroke-dashoffset: 0;
+}
+
+/* --------------------------------------------------------------- controls */
+
+button, input, select, textarea { font: inherit; color: inherit; }
+
+/* Primary action. Lives in the lower third — one-handed reach. Spec §8. */
+.btn {
+  display: block;
+  width: 100%;
+  padding: 15px 18px;
+  background: var(--ink);
+  color: var(--paper);
+  border: none;
+  font-family: var(--hand);
+  font-weight: 700;
+  font-size: var(--step-0);
+  cursor: pointer;
+  box-shadow: var(--shadow-hard);
+  transform: rotate(var(--tilt));
+  transition: transform 0.12s ease, box-shadow 0.12s ease;
+}
+.btn:active { transform: rotate(var(--tilt)) translate(2px, 2px); box-shadow: 1px 1px 0 rgba(43,41,37,.16); }
+.btn:disabled { opacity: 0.34; cursor: default; box-shadow: none; }
+
+.btn-alt {
+  background: none;
+  color: var(--ink);
+  border: 1.5px dashed var(--ink-line);
+  box-shadow: none;
+}
+.btn-alt:active { box-shadow: none; }
+
+/* A card-shaped choice: sticky note, hard shadow, no blur. */
+.choice {
+  display: block;
+  width: 100%;
+  text-align: left;
+  background: var(--paper-2);
+  border: 1px solid var(--paper-edge);
+  box-shadow: var(--shadow-lift);
+  padding: 16px 18px;
+  cursor: pointer;
+  transform: rotate(var(--tilt));
+  transition: transform 0.14s ease, box-shadow 0.14s ease;
+}
+.choice:hover { transform: rotate(var(--tilt)) translate(-1px, -2px); box-shadow: 6px 8px 0 rgba(43,41,37,.16); }
+.choice:active { transform: rotate(var(--tilt)) translate(2px, 2px); box-shadow: 2px 2px 0 rgba(43,41,37,.14); }
+.choice b { display: block; font-size: var(--step-1); margin-bottom: 2px; }
+
+.tiny {
+  border: 1.5px dashed var(--ink-line);
+  background: none;
+  color: var(--ink-2);
+  padding: 5px 10px;
+  font-size: var(--step--1);
+  font-family: var(--hand);
+  cursor: pointer;
+}
+.tiny.on { background: var(--ink); color: var(--paper); border-style: solid; border-color: var(--ink); }
+
+.link {
+  background: none;
+  border: none;
+  padding: 0;
+  color: var(--ink-2);
+  font-family: var(--scrawl);
+  font-size: 1.2em;
+  cursor: pointer;
+  text-decoration: underline;
+  text-decoration-style: wavy;
+  text-underline-offset: 3px;
+}
+
+/* Written-on-the-line inputs, not boxes. */
+.write {
+  width: 100%;
+  background: none;
+  border: none;
+  border-bottom: 1.5px dashed var(--ink-line);
+  padding: 8px 2px;
+  font-family: var(--hand);
+  font-size: var(--step-0);
+  border-radius: 0;
+}
+.write:focus { outline: none; border-bottom-color: var(--rose); border-bottom-style: solid; }
+.write::placeholder { color: var(--ink-3); opacity: 0.75; }
+.write.amt { font-family: var(--ledger); text-align: right; }
+
+/* Focus that survives the aesthetic. */
+:where(button, input, a, [tabindex]):focus-visible {
+  outline: 2.5px solid var(--slate);
+  outline-offset: 2px;
+}
+
+/* ---------------------------------------------------------------- layout */
+
+.row { display: flex; justify-content: space-between; align-items: baseline; gap: var(--gap); }
+.stack > * + * { margin-top: var(--gap); }
+.stack-lg > * + * { margin-top: calc(var(--gap) * 2); }
+
+/* Sticky bar — your own number should never require scrolling. Spec §8. */
+.bar {
+  position: fixed;
+  inset: auto 0 0 0;
+  background: var(--ink);
+  color: var(--paper);
+  padding: 12px 16px calc(12px + env(safe-area-inset-bottom));
+  box-shadow: 0 -3px 0 rgba(43, 41, 37, 0.14);
+  z-index: 20;
+}
+.bar-in { max-width: 560px; margin-inline: auto; display: flex; justify-content: space-between; align-items: center; gap: var(--gap); }
+.bar .amt { color: var(--paper); }
+
+.ghost {
+  background: none;
+  border: 1.5px dashed rgba(243, 236, 218, 0.4);
+  color: var(--paper);
+  padding: 7px 12px;
+  font-size: var(--step--1);
+  font-family: var(--hand);
+  cursor: pointer;
+}
+
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-family: var(--scrawl);
+  font-size: 1.05em;
+  color: #fff;
+  padding: 1px 9px 2px;
+  border-radius: 12px;
+  transform: rotate(var(--tilt));
+}
+
+.toast {
+  position: fixed;
+  left: 50%;
+  bottom: 104px;
+  transform: translateX(-50%) rotate(-1.4deg);
+  background: var(--ink);
+  color: var(--paper);
+  padding: 10px 18px;
+  box-shadow: var(--shadow-lift);
+  z-index: 30;
+  font-family: var(--scrawl);
+  font-size: 1.2em;
+}
+
+/* Long item lists: skip layout for what is off-screen. */
+.lines { content-visibility: auto; contain-intrinsic-size: auto 640px; }
+
+/* A claim landing from another device should arrive, briefly, so people
+   notice it happened. Spec §8. */
+@keyframes land {
+  from { opacity: 0; transform: rotate(var(--tilt)) translateY(-6px) scale(0.86); }
+  to   { opacity: 1; transform: rotate(var(--tilt)) translateY(0) scale(1); }
+}
+.landed { animation: land 0.32s cubic-bezier(0.2, 0.9, 0.3, 1.3); }
+
+.sr-only {
+  position: absolute; width: 1px; height: 1px;
+  padding: 0; margin: -1px; overflow: hidden;
+  clip-path: inset(50%); white-space: nowrap;
+}
+
+/*
+ * All that rotation plus the fixed paper background is expensive on mobile,
+ * and some people simply cannot tolerate it. Flatten everything.
+ */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+  }
+  .tilt, .sticky, .btn, .choice, .chip, .toast { transform: none !important; }
+  .toast { transform: translateX(-50%) !important; }
+  .underline-draw path { stroke-dashoffset: 0; }
+}
+
+/* ---------------------------------------------------------------- camera */
+
+.view {
+  display: block;
+  width: 100%;
+  aspect-ratio: 3 / 4;
+  object-fit: cover;
+  background: #17150f;
+  border: 1px solid var(--paper-edge);
+  box-shadow: var(--shadow-lift);
+}
+
+/* Big, central, unmissable — the one thing to do on this screen. */
+.shutter {
+  width: 74px;
+  height: 74px;
+  border-radius: 50%;
+  border: 3px solid var(--ink);
+  background: var(--paper);
+  cursor: pointer;
+  padding: 0;
+  box-shadow: inset 0 0 0 3px var(--paper), inset 0 0 0 7px var(--ink);
+  transition: transform 0.1s ease;
+}
+.shutter:active { transform: scale(0.93); }
+.shutter:disabled { opacity: 0.35; cursor: default; }
+
+/* ----------------------------------------------------------- item rows */
+
+/* The row is the button. Nobody aims for a checkbox holding a plate. */
+.item {
+  display: block;
+  width: 100%;
+  text-align: left;
+  background: none;
+  border: none;
+  border-bottom: 1.5px dashed var(--ink-line);
+  padding: 11px 4px;
+  cursor: pointer;
+  font: inherit;
+  color: inherit;
+}
+.item.on {
+  background: color-mix(in srgb, var(--rose) 11%, transparent);
+  box-shadow: inset 3px 0 0 var(--rose);
+}
+.item:last-child { border-bottom: none; }
+
+.step {
+  border: none;
+  background: rgba(255, 255, 255, 0.3);
+  color: #fff;
+  width: 19px;
+  height: 19px;
+  border-radius: 50%;
+  font-size: 13px;
+  line-height: 1;
+  cursor: pointer;
+  padding: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--ledger);
+}
+
+/* Grid for one editable line: name / qty / price. */
+.line-grid {
+  display: grid;
+  grid-template-columns: 1fr 3.2rem 6.5rem;
+  gap: 8px;
+  align-items: end;
+}

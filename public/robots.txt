@@ -1,0 +1,11 @@
+User-agent: *
+Allow: /$
+Allow: /how-it-works
+
+# Splits hold people's bills. They are private, ephemeral, and worthless to a
+# search index.
+Disallow: /s/
+Disallow: /app.html
+Disallow: /api/
+
+Sitemap: https://hissa.itisamzia.dev/sitemap.xml

@@ -1,0 +1,42 @@
+/*
+ * Self-hosted, instanced and subset. Regenerate with tools/fonts.sh.
+ *
+ * Total 64 KB across four files, of which only hissa-hand (35 KB) is on the
+ * critical path — it is the only face preloaded. The others swap in.
+ *
+ * Caveat ships without contextual alternates: they cost 21 KB, which is more
+ * than the whole ledger family, to vary letterforms in text that is never
+ * more than a few words long.
+ */
+
+@font-face {
+  font-family: "Shantell Sans";
+  src: url("/fonts/hissa-hand.woff2") format("woff2");
+  font-weight: 300 800;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "Caveat";
+  src: url("/fonts/hissa-scrawl.woff2") format("woff2");
+  font-weight: 400 700;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "Courier Prime";
+  src: url("/fonts/hissa-ledger.woff2") format("woff2");
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "Courier Prime";
+  src: url("/fonts/hissa-ledger-bold.woff2") format("woff2");
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+}

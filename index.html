@@ -1,0 +1,182 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <title>Hissa — photograph a bill, tap what you ate, split it</title>
+    <meta
+      name="description"
+      content="Photograph a restaurant bill and Hissa reads the lines. Everyone taps what they ate and sees what they owe. No account, no install, no app store — share a four-letter code and split it at the table."
+    />
+    <link rel="canonical" href="https://hissa.itisamzia.dev/" />
+    <meta name="theme-color" content="#f3ecda" media="(prefers-color-scheme: light)" />
+    <meta name="theme-color" content="#211f1b" media="(prefers-color-scheme: dark)" />
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+    <link rel="apple-touch-icon" href="/icons/icon-192.png" />
+    <link rel="manifest" href="/manifest.webmanifest" />
+
+    <meta property="og:type" content="website" />
+    <meta property="og:url" content="https://hissa.itisamzia.dev/" />
+    <meta property="og:title" content="Hissa — photograph a bill, tap what you ate, split it" />
+    <meta property="og:description" content="Snap the receipt, everyone taps what they ate, everyone sees their share. No account, no install." />
+    <meta property="og:image" content="https://hissa.itisamzia.dev/og.png" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:locale" content="en_PK" />
+    <meta property="og:site_name" content="Hissa" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="Hissa — photograph a bill, tap what you ate, split it" />
+    <meta name="twitter:description" content="Snap the receipt, everyone taps what they ate, everyone sees their share." />
+    <meta name="twitter:image" content="https://hissa.itisamzia.dev/og.png" />
+
+    <link rel="preload" href="/fonts/hissa-hand.woff2" as="font" type="font/woff2" crossorigin />
+    <link rel="stylesheet" href="/src/styles/fonts.css" />
+    <link rel="stylesheet" href="/src/styles/journal.css" />
+
+    <script type="application/ld+json">
+      {
+        "@context": "https://schema.org",
+        "@type": "WebApplication",
+        "name": "Hissa",
+        "url": "https://hissa.itisamzia.dev/",
+        "applicationCategory": "FinanceApplication",
+        "operatingSystem": "Any, browser-based",
+        "description": "Photograph a restaurant bill, tap what you ate, and everyone sees their share. No account, no install.",
+        "offers": { "@type": "Offer", "price": "0", "priceCurrency": "USD" },
+        "featureList": [
+          "Reads a bill from a photo",
+          "Tap-to-claim per item",
+          "Equal split calculator",
+          "Shared live split by four-letter code",
+          "Works offline as an installable web app"
+        ]
+      }
+    </script>
+  </head>
+
+  <body>
+    <div class="paper">
+      <main class="sheet" style="padding-bottom: 60px">
+        <header style="margin-bottom: 34px">
+          <div class="eyebrow">entry no. 01 &middot; a note on splitting bills</div>
+          <h1 class="tilt" style="--tilt: -1.6deg; margin-top: 6px">hissa</h1>
+          <p class="scrawl" style="font-size: 1.5em; color: var(--ink-2); margin: 0">
+            photograph a bill, tap what you ate, everyone sees their share.
+          </p>
+        </header>
+
+        <section class="sticky" style="--tilt: 1.1deg; margin-bottom: 30px">
+          <p style="margin: 0">
+            <em>hissa</em> (Urdu, &#1581;&#1589;&#1607;) &mdash; share, portion. what's yours out of
+            what everyone had.
+          </p>
+        </section>
+
+        <a class="btn" href="/app.html" style="--tilt: -0.9deg; text-align: center; text-decoration: none">
+          split a bill &rarr;
+        </a>
+
+        <hr class="rule-dash" style="margin: 38px 0 26px" />
+
+        <section>
+          <h2 class="tilt" style="--tilt: 0.8deg">the problem</h2>
+          <div class="prose">
+            <p>
+              eight people, one bill, one person squinting at a receipt doing arithmetic while the
+              food goes cold. someone had the biryani, someone had a salad, someone only had chai,
+              and everyone ends up paying the same because working out the truth takes longer than
+              it's worth.
+            </p>
+          </div>
+
+          <p class="field-note scrawl" data-label="why" style="color: var(--rose)">
+            splitting evenly is a tax on whoever ordered least.
+          </p>
+        </section>
+
+        <hr class="rule-dash" style="margin: 30px 0" />
+
+        <section>
+          <h2 class="tilt" style="--tilt: -1.1deg">how it goes</h2>
+
+          <ol style="list-style: none; padding: 0; margin: 0">
+            <li class="sticky" style="--tilt: -0.8deg; margin-bottom: 16px">
+              <strong>1 &middot; snap it</strong>
+              <p style="margin: 4px 0 0">
+                point at the receipt. the lines and the tax fill themselves in. you check them
+                &mdash; one wrong digit is a real argument later, so hissa always asks.
+              </p>
+            </li>
+            <li class="sticky" style="--tilt: 1.4deg; margin-bottom: 16px">
+              <strong>2 &middot; pass the code</strong>
+              <p style="margin: 4px 0 0">
+                four letters. read them across the table or send the link. no account, no install,
+                nobody downloads anything.
+              </p>
+            </li>
+            <li class="sticky" style="--tilt: -0.4deg">
+              <strong>3 &middot; everyone taps</strong>
+              <p style="margin: 4px 0 0">
+                tap what you ate. shared a plate? tap it twice. your number sits at the bottom of
+                the screen and updates as people go.
+              </p>
+            </li>
+          </ol>
+        </section>
+
+        <hr class="rule-dash" style="margin: 30px 0" />
+
+        <section>
+          <h2 class="tilt" style="--tilt: 0.6deg">what it does about the awkward bits</h2>
+
+          <p class="field-note" data-label="split a plate">
+            claims are portions, not people. a dish for two takes two taps and costs you two shares
+            of it.
+          </p>
+          <p class="field-note" data-label="tax and tip">
+            gst, discount and tip ride along proportionally. you never pay tip on someone else's
+            steak.
+          </p>
+          <p class="field-note" data-label="the rounding">
+            every line is distributed to the last paisa. the group can't under-cover a bill by
+            accident.
+          </p>
+          <p class="field-note" data-label="the thing nobody claimed">
+            the naan nobody admits to. flip <em>share leftovers</em> and it splits across everyone
+            who ate.
+          </p>
+          <p class="strike">a settings screen, a profile, an onboarding carousel</p>
+          <p class="scrawl dim" style="margin-top: -6px">&mdash; not building those.</p>
+        </section>
+
+        <hr class="rule-dash" style="margin: 30px 0" />
+
+        <section>
+          <h2 class="tilt" style="--tilt: -0.7deg">honest limits</h2>
+          <p class="field-note" data-label="the photo">
+            it's read by a vision model and thrown away. never stored.
+          </p>
+          <p class="field-note" data-label="the code">
+            anyone holding it can see the split. it stops working after a day.
+          </p>
+          <p class="field-note" data-label="no payments">
+            hissa tells you the number. moving the money is between you.
+          </p>
+        </section>
+
+        <div style="margin-top: 40px">
+          <a class="btn" href="/app.html" style="--tilt: 0.7deg; text-align: center; text-decoration: none">
+            split a bill &rarr;
+          </a>
+          <p style="text-align: center; margin-top: 16px">
+            <a class="link" href="/how-it-works">the longer version &rarr;</a>
+          </p>
+        </div>
+
+        <footer class="scrawl dim small" style="margin-top: 46px; text-align: center">
+          made because splitting a bill at a table shouldn't need a spreadsheet.
+        </footer>
+      </main>
+    </div>
+  </body>
+</html>

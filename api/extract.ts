@@ -1,0 +1,140 @@
+/**
+ * POST /api/extract — read a bill photo. Spec §7.
+ *
+ * The key lives here and only here: anything the browser can see is public.
+ * The photo is used for one request and never stored.
+ */
+
+import { handler, readJson, json, HttpError } from "./_lib/http";
+import { cmd } from "./_lib/redis";
+
+export const config = { runtime: "edge" };
+
+const MODEL = "gemini-2.5-flash";
+const ENDPOINT = `https://generativelanguage.googleapis.com/v1beta/models/${MODEL}:generateContent`;
+
+/** A 1400px JPEG at q0.75 lands around 200 KB; 1.5 MB is a generous ceiling. */
+const MAX_BYTES = 1_500_000;
+
+const PROMPT = `You are reading a photo of a restaurant or shop bill.
+- "price" is the LINE TOTAL for that row (quantity x unit rate), never the unit rate.
+- Copy item names as printed. Skip subtotal, tax, discount and total rows from the items list.
+- "gstPct" is the tax percentage. If the bill shows more than one rate, use the lower one. If none, use 0.
+- "currency" is a short symbol such as Rs, $, PKR, AED.
+- "printedSubtotal" is the subtotal as printed on the bill, or 0 if it is not shown.
+- Numbers are plain numbers: no commas, no currency symbols.`;
+
+/** Structured output, so there is no fenced-JSON-and-slice dance. Spec §7.2 */
+const SCHEMA = {
+  type: "OBJECT",
+  properties: {
+    currency: { type: "STRING" },
+    items: {
+      type: "ARRAY",
+      items: {
+        type: "OBJECT",
+        properties: {
+          name: { type: "STRING" },
+          qty: { type: "NUMBER" },
+          price: { type: "NUMBER" },
+        },
+        required: ["name", "qty", "price"],
+      },
+    },
+    gstPct: { type: "NUMBER" },
+    discount: { type: "NUMBER" },
+    tip: { type: "NUMBER" },
+    printedSubtotal: { type: "NUMBER" },
+  },
+  required: ["currency", "items", "gstPct", "discount", "tip", "printedSubtotal"],
+};
+
+/** Cheap per-IP throttle. Best-effort: a Redis outage must not block reading. */
+async function throttle(req: Request): Promise<void> {
+  const ip = req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || "anon";
+  try {
+    const n = await cmd<number>("INCR", `rl:extract:${ip}`);
+    if (n === 1) await cmd("EXPIRE", `rl:extract:${ip}`, 3600);
+    if (n > 40) throw new HttpError("That is a lot of bills in an hour. Try again later.", 429);
+  } catch (e) {
+    if (e instanceof HttpError) throw e;
+  }
+}
+
+interface Item { name: string; qty: number; price: number }
+
+export default handler(async (req) => {
+  if (req.method !== "POST") throw new HttpError("Method not allowed.", 405);
+
+  const key = process.env.GEMINI_API_KEY;
+  if (!key) throw new HttpError("Bill reading is not configured right now.", 503);
+
+  const { image } = await readJson<{ image?: string }>(req);
+  if (typeof image !== "string" || image.length < 100) throw new HttpError("No photo received.", 400);
+  // base64 is 4 chars per 3 bytes.
+  if (image.length * 0.75 > MAX_BYTES) throw new HttpError("That photo is too large.", 413);
+
+  await throttle(req);
+
+  const res = await fetch(`${ENDPOINT}?key=${key}`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      contents: [{
+        parts: [
+          { inline_data: { mime_type: "image/jpeg", data: image } },
+          { text: PROMPT },
+        ],
+      }],
+      generationConfig: {
+        responseMimeType: "application/json",
+        responseSchema: SCHEMA,
+        // Thinking tokens bill as output at five times the input rate, and
+        // reading a receipt needs no reasoning budget. Spec §7.3.
+        thinkingConfig: { thinkingBudget: 0 },
+        temperature: 0,
+      },
+    }),
+  });
+
+  if (!res.ok) {
+    console.error("gemini", res.status, (await res.text()).slice(0, 300));
+    throw new HttpError("Could not read that bill.", 502);
+  }
+
+  const data = (await res.json()) as {
+    candidates?: { content?: { parts?: { text?: string }[] } }[];
+  };
+  const text = data.candidates?.[0]?.content?.parts?.map((p) => p.text ?? "").join("") ?? "";
+
+  let out: { currency?: string; items?: Item[]; gstPct?: number; discount?: number; tip?: number; printedSubtotal?: number };
+  try {
+    out = JSON.parse(text);
+  } catch {
+    throw new HttpError("Could not read that bill.", 502);
+  }
+
+  const items = (out.items ?? [])
+    .slice(0, 40)
+    .map((i) => ({
+      name: String(i?.name ?? "").slice(0, 60),
+      qty: Number.isFinite(i?.qty) ? Math.max(1, Math.round(i.qty)) : 1,
+      price: Number.isFinite(i?.price) ? i.price : 0,
+    }))
+    .filter((i) => i.name || i.price);
+
+  // Arithmetic check: one comparison that catches most misreads, and tells the
+  // review screen when to be loud about it. Spec §7.4.
+  const summed = items.reduce((s, i) => s + i.price, 0);
+  const printed = Number(out.printedSubtotal) || 0;
+  const suspect = printed > 0 && Math.abs(summed - printed) > Math.max(1, printed * 0.02);
+
+  return json({
+    currency: String(out.currency ?? "Rs").slice(0, 4),
+    items,
+    gstPct: Number(out.gstPct) || 0,
+    discount: Number(out.discount) || 0,
+    tip: Number(out.tip) || 0,
+    suspect,
+  });
+});

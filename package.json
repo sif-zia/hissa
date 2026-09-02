@@ -1,0 +1,25 @@
+{
+  "name": "hissa",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc -b && vite build",
+    "preview": "vite preview",
+    "test": "vitest run",
+    "test:watch": "vitest"
+  },
+  "dependencies": {
+    "preact": "^10.28.3",
+    "wouter-preact": "^3.10.0"
+  },
+  "devDependencies": {
+    "@preact/preset-vite": "^2.10.2",
+    "@types/node": "^24.10.1",
+    "typescript": "^5.9.3",
+    "vite": "^7.2.2",
+    "vite-plugin-pwa": "^1.0.4",
+    "vitest": "^3.2.4"
+  }
+}
