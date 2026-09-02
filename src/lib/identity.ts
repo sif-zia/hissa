@@ -34,6 +34,31 @@ export function hash(k: string): number {
 
 export const colorFor = (k: string): string => CHIPS[hash(k) % CHIPS.length] as string;
 
+/**
+ * Colours for everyone on one bill, with collisions resolved.
+ *
+ * Hashing a name straight to a colour is stable but not distinct: at a table
+ * of six, two people landing on the same chip is likely enough to be a real
+ * problem, and the colour is what tells you whose chip is whose at a glance.
+ *
+ * Each person takes their hashed colour, or the next free one if it is gone.
+ * Keys are sorted first so every device assigns identically — the person whose
+ * own name sorts last must not see a different palette from everyone else.
+ */
+export function paletteFor(keys: string[]): Record<string, string> {
+  const out: Record<string, string> = {};
+  const taken = new Set<number>();
+  for (const key of [...new Set(keys)].sort()) {
+    const start = hash(key) % CHIPS.length;
+    let i = start;
+    // Past CHIPS.length people, colours have to repeat; fall back to the hash.
+    for (let n = 0; n < CHIPS.length && taken.has(i); n += 1) i = (i + 1) % CHIPS.length;
+    taken.add(i);
+    out[key] = CHIPS[i] as string;
+  }
+  return out;
+}
+
 export interface Identity {
   key: string;
   name: string;

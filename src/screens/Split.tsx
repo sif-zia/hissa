@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from "preact/hooks";
 import { Sheet, Head, Amount } from "../ui";
 import { fmt } from "../lib/money";
 import { spread, shareOf, type BillMeta, type Claims, type Person } from "../lib/split";
-import { colorFor, type Identity } from "../lib/identity";
+import { paletteFor, type Identity } from "../lib/identity";
 import { tiltStyle } from "../lib/tilt";
 
 /**
@@ -39,6 +39,8 @@ export function Split({
   ];
 
   const { subShare, loose, byLine } = spread(meta, everyone);
+  // Built from every key on the bill, so it is identical on every device.
+  const palette = paletteFor(everyone.map((p) => p.key));
   const myTotal = shareOf(meta, subShare[me.key] ?? 0);
   const looseTotal = shareOf(meta, loose);
 
@@ -86,6 +88,7 @@ export function Split({
                       lineId={line.id}
                       isMe={p.key === me.key}
                       onBump={onBump}
+                      colour={palette[p.key] as string}
                     />
                   ))}
                 </div>
@@ -122,7 +125,7 @@ export function Split({
                 aria-hidden="true"
                 style={{
                   display: "inline-block", width: 9, height: 9, borderRadius: "50%",
-                  background: colorFor(p.key), marginRight: 8,
+                  background: palette[p.key], marginRight: 8,
                 }}
               />
               {p.name}
@@ -156,12 +159,13 @@ export function Split({
 
 /** A claimer's chip. Yours carries the ×N stepper; nobody else's does. */
 function Chip({
-  person, lineId, isMe, onBump,
+  person, lineId, isMe, onBump, colour,
 }: {
   person: Person;
   lineId: string;
   isMe: boolean;
   onBump: (lineId: string, delta: number) => void;
+  colour: string;
 }) {
   const n = person.claims[lineId] ?? 0;
   const seen = useRef(false);
@@ -187,7 +191,7 @@ function Chip({
   return (
     <span
       class={`chip${landed ? " landed" : ""}`}
-      style={{ ...tiltStyle(`${person.key}-${lineId}`, "scrap"), background: colorFor(person.key) }}
+      style={{ ...tiltStyle(`${person.key}-${lineId}`, "scrap"), background: colour }}
     >
       {person.name}
       {isMe ? (
