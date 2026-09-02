@@ -366,7 +366,7 @@ button, input, select, textarea { font: inherit; color: inherit; }
   border: 1px solid var(--paper-edge);
   background: var(--paper-2);
   color: var(--ink-2);
-  padding: 5px 11px;
+  padding: 9px 13px;
   font-size: var(--step--1);
   font-family: var(--hand);
   cursor: pointer;
@@ -440,7 +440,7 @@ button, input, select, textarea { font: inherit; color: inherit; }
   background: rgba(243, 236, 218, 0.12);
   border: 1px solid rgba(243, 236, 218, 0.3);
   color: var(--paper);
-  padding: 7px 13px;
+  padding: 11px 15px;
   font-size: var(--step--1);
   font-family: var(--hand);
   cursor: pointer;
@@ -558,12 +558,20 @@ button, input, select, textarea { font: inherit; color: inherit; }
    its own line under it. */
 .item:last-child { border-bottom: none; }
 
+/*
+ * The portion stepper. Drawn small so the chip stays a chip, but its hit area
+ * is stretched well past its box — 19px of target is exactly the "aiming for
+ * a checkbox while holding a plate" problem the row-as-button avoids.
+ * Stretched vertically rather than horizontally, so the - and + next to each
+ * other never overlap.
+ */
 .step {
+  position: relative;
   border: none;
   background: rgba(255, 255, 255, 0.3);
   color: #fff;
-  width: 19px;
-  height: 19px;
+  width: 21px;
+  height: 21px;
   border-radius: 50%;
   font-size: 13px;
   line-height: 1;
@@ -573,6 +581,15 @@ button, input, select, textarea { font: inherit; color: inherit; }
   align-items: center;
   justify-content: center;
   font-family: var(--ledger);
+}
+.step::after {
+  content: "";
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 30px;
+  height: 42px;
+  transform: translate(-50%, -50%);
 }
 
 /* Grid for one editable line: name / qty / price. */
@@ -616,8 +633,8 @@ button, input, select, textarea { font: inherit; color: inherit; }
   top: 14px;
   right: 12px;
   z-index: 5;
-  width: 34px;
-  height: 34px;
+  width: 40px;
+  height: 40px;
   display: grid;
   place-items: center;
   border: 1px solid var(--paper-edge);
