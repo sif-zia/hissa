@@ -30,8 +30,10 @@ export function Editor({
   const [more, setMore] = useState(false);
   const choices = outcomes(bill);
   const printed = bill.printedTotal;
-  const anyMatch = [...choices.visible, ...choices.more].some((o) => o.matches);
-  const pctOf = (k: Kind) => k === "gst" || bill.adj[k].mode === "pct";
+  const everyWay = [...choices.visible, ...choices.more];
+  const anyMatch = everyWay.some((o) => o.matches);
+  const nearest = everyWay.find((o) => o.closest);
+  const pctOf = (k: Kind) => bill.adj[k].mode === "pct";
 
   const patch = (over: Partial<DraftBill>) => setBill({ ...bill, ...over });
   const setItem = (id: string, over: Partial<DraftItem>) =>
@@ -149,8 +151,10 @@ export function Editor({
       ) : null}
       {printed && !anyMatch ? (
         <p class="sticky scrawl" style={{ "--tilt": "1.1deg", color: "var(--warn)", marginTop: 18 }}>
-          heads up → the bill says {money(printed)} and no way of working out the extras gets there.
-          check them.
+          heads up → no way of working out the extras gets exactly to the bill's {money(printed)}.{" "}
+          {nearest && nearest.total !== t.total
+            ? `the closest gives ${money(nearest.total)}, marked "closest" in the list below.`
+            : `this is the closest, ${money(Math.abs(t.total - printed))} out. worth a check.`}
         </p>
       ) : null}
 
@@ -195,6 +199,7 @@ export function Editor({
                     <span style={{ whiteSpace: "nowrap" }}>
                       <Amount value={money(o.total)} />
                       {o.matches ? <span class="scrawl" style={{ color: "var(--sage)" }}> ✓ bill</span> : null}
+                      {o.closest ? <span class="scrawl" style={{ color: "var(--warn)" }}> closest</span> : null}
                     </span>
                   </button>
                 ))}
@@ -248,18 +253,14 @@ function ExtraRow({
   const set = (over: Partial<typeof a>) => patch({ adj: { ...bill.adj, [kind]: { ...a, ...over } } });
   return (
     <div class="row">
-      <label class="eyebrow" for={`f-${kind}`}>{kind === "gst" ? "gst %" : LABEL[kind]}</label>
+      <label class="eyebrow" for={`f-${kind}`}>{LABEL[kind]}</label>
       <span style={{ display: "flex", gap: 6, alignItems: "end" }}>
-        {kind !== "gst" ? (
-          <>
-            <button class={a.mode === "flat" ? "tiny on" : "tiny"} onClick={() => set({ mode: "flat" })}>
-              {cur}
-            </button>
-            <button class={a.mode === "pct" ? "tiny on" : "tiny"} onClick={() => set({ mode: "pct" })}>
-              %
-            </button>
-          </>
-        ) : null}
+        <button class={a.mode === "flat" ? "tiny on" : "tiny"} onClick={() => set({ mode: "flat" })}>
+          {cur}
+        </button>
+        <button class={a.mode === "pct" ? "tiny on" : "tiny"} onClick={() => set({ mode: "pct" })}>
+          %
+        </button>
         <input
           id={`f-${kind}`}
           class="write amt"

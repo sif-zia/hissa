@@ -150,6 +150,9 @@ export function Capture({
 
         <div class="cam-bottom">
           <button class="stub cam-btn" onClick={() => fileRef.current?.click()}>
+            <svg width="16" height="16" viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M12 15.5V4.2M7.4 8.6 12 4l4.6 4.6M4.6 14.8v5h14.8v-5" />
+            </svg>
             <span>upload</span>
           </button>
           <button class="shutter" onClick={snap} disabled={camState !== "live"} aria-label="Take the photo" />

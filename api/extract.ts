@@ -32,7 +32,7 @@ const PROMPT = `You are reading a photo of a restaurant or shop bill.
 - "price" is the LINE TOTAL for that row (quantity x unit rate), never the unit rate.
 - Copy item names as printed. Skip subtotal, tax, discount and total rows from the items list.
 - "adjustments" lists each charge or reduction printed after the items, at most one of each kind:
-  "gst" for sales tax, GST or VAT (if more than one tax rate is shown, use the lower one);
+  "gst" for sales tax, GST or VAT;
   "service" for a service charge (a service charge is never a tip);
   "discount" for any discount;
   "tip" only when a tip or gratuity is actually printed.
@@ -40,6 +40,7 @@ const PROMPT = `You are reading a photo of a restaurant or shop bill.
 - "step" says what the adjustment was calculated on: 1 if on the items subtotal; 2 if on the subtotal after the step-1 adjustments were applied; 3 if after step 2; and so on. Adjustments calculated on the same amount share a step.
 - "printedSubtotal" is the subtotal as printed, or 0 if it is not shown.
 - "printedTotal" is the final amount payable as printed, or 0 if it is not shown.
+- Some bills print two taxes for two ways of paying (for example GST 16% with a "Net Amount" for cash, and GST 8% with a separate card total). Report only the tax that belongs to the main total line (Net Amount, Grand Total, Total Bill), and that total as "printedTotal". The reported tax and printedTotal must always belong together.
 - "place" is the restaurant or shop name from the top of the bill, or "" if no name is visible. An address, phone number or tax number is not a name.
 - "currency" is a short symbol such as Rs, $, PKR, AED.
 - Numbers are plain numbers: no commas, no currency symbols.`;
