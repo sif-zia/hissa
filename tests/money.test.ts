@@ -271,7 +271,7 @@ describe("detect", () => {
 
   it("accepts the model's steps when they reproduce the printed total within a rupee", () => {
     const r = detect(b(330600 + 60), [["gst"], ["discount", "tip"]]);
-    expect(r).toEqual({ steps: [["gst"], ["discount", "tip"]], fit: "match" });
+    expect(r).toMatchObject({ steps: [["gst"], ["discount", "tip"]], fit: "match" });
   });
 
   it("finds the right stacking when the model's is wrong", () => {
@@ -281,9 +281,22 @@ describe("detect", () => {
     expect(r.steps).toEqual([["gst", "discount", "tip"]]);
   });
 
-  it("keeps the model's steps and says so when nothing fits", () => {
-    const r = detect(b(999999), [["gst"], ["discount", "tip"]]);
-    expect(r).toEqual({ steps: [["gst"], ["discount", "tip"]], fit: "none" });
+  it("picks the closest stacking when nothing reaches the printed total", () => {
+    const r = detect(b(340000), [["gst"], ["discount", "tip"]]);
+    expect(r.fit).toBe("closest");
+    // The largest of the five totals is the nearest to 340,000.
+    const { visible, more } = outcomes(three(DEFAULT_STEPS), 99);
+    const top = Math.max(...[...visible, ...more].map((o) => o.total));
+    expect(apply(300000, r.adj, r.steps).total).toBe(top);
+  });
+
+  it("prefers an exact reading from a later variant over a closer-looking earlier one", () => {
+    const rate = three(DEFAULT_STEPS).adj;
+    const asAmount = { ...rate, gst: { mode: "flat" as const, val: "470" } };
+    // Only the flat 470 reading reaches 329,700 (3000 + 470 - 347 + 173.5).
+    const r = detect({ ...three(DEFAULT_STEPS), printedTotal: 329650 }, [["gst"], ["discount", "tip"]], [rate, asAmount]);
+    expect(r.fit).toBe("match");
+    expect(r.adj.gst).toEqual({ mode: "flat", val: "470" });
   });
 
   it("takes the model's word when no total was printed", () => {

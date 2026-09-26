@@ -52,14 +52,15 @@ export function ShareBlock({
     <div style={{ marginTop: 26 }}>
       <hr class="rule-dash" />
       {items ? (
-        <button
-          class={on ? "tiny on" : "tiny"}
-          onClick={toggle}
-          aria-pressed={on}
-          style={{ marginBottom: 14 }}
-        >
-          with items {on ? "✓" : ""}
-        </button>
+        <label class="check" style={{ marginBottom: 10 }}>
+          <input type="checkbox" checked={on} onChange={toggle} />
+          <span class="check-box" aria-hidden="true">
+            {on ? (
+              <svg viewBox="0 0 24 24"><path d="M4.5 12.8 9.6 17.6 19.8 5.8" /></svg>
+            ) : null}
+          </span>
+          <span>with each person's items</span>
+        </label>
       ) : null}
       <div class="row" style={{ gap: 10 }}>
         <button class="btn" style={{ flex: 1 }} onClick={() => void sendImage()}>

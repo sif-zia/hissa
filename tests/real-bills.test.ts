@@ -18,6 +18,10 @@ import type { Extracted } from "../src/lib/api";
  *   9  (address only) 15% SST plus a Rs 1 "POS service" fee
  *   10 Freddy's       50% discount, 6% tax, 5% service: the printed numbers do not
  *                     reach the printed total by any reading, so the editor must say so
+ *   11 Howdy          discount printed as 48% but charged as 1,500; GST 16% on the
+ *                     pre-discount subtotal; a second "GST 8% / card total" pricing
+ *                     that must not be mixed with the main total (read after the
+ *                     prompt learned to keep a tax and its total together)
  */
 const bills: Record<string, Extracted> = {
   "bill-1": {"currency":"$","place":"La Cabaña","items":[{"name":"Dos Tacos (Brunch)","qty":1,"price":18},{"name":"6. Taco y Enchilada (Super Combo)","qty":1,"price":21.95},{"name":"Brunch Reg Lime Margarita","qty":1,"price":12.75}],"adjustments":[{"kind":"gst","pct":0,"amount":5.01,"step":1}],"printedTotal":57.71},
@@ -31,6 +35,7 @@ const bills: Record<string, Extracted> = {
   "bill-9": {"currency":"Rs","place":"JINNAH AVENUE ROAD PLOT #2, MODEL COLONY","items":[{"name":"SCHEZWAN SC UP MEDIUM","qty":1,"price":875},{"name":"AMERICAN CHOPSUEY","qty":1,"price":1585},{"name":"VEGETABLE FRIED RICE - LARGE","qty":1,"price":1395},{"name":"BLACK PEPPER CHICKEN LARGE","qty":1,"price":1595},{"name":"Mineral Water Glass Bottle","qty":2,"price":360}],"adjustments":[{"kind":"gst","pct":15,"amount":871,"step":1},{"kind":"service","pct":0,"amount":1,"step":1}],"printedTotal":6682},
   "bill-10": {"currency":"Rs","place":"Freddy's Cafe'","items":[{"name":"FREDDYS CLUB SANDWICH","qty":1,"price":1690},{"name":"FISH N CHIPS","qty":1,"price":2645},{"name":"THREE LEAF THAI CHICKEN","qty":1,"price":2490},{"name":"FREDDYS LITTLE ALASKA","qty":1,"price":895},{"name":"LEMONADE","qty":3,"price":1050}],"adjustments":[{"kind":"gst","pct":6,"amount":537,"step":2},{"kind":"discount","pct":50,"amount":3938,"step":1},{"kind":"service","pct":5,"amount":394,"step":2}],"printedTotal":5606},
 
+  "bill-11": {"currency":"PKR","place":"HOWDY","items":[{"name":"CURLY FRIES","qty":1,"price":649},{"name":"SON OF A BUN","qty":1,"price":1249},{"name":"MINT MARGARITA","qty":1,"price":499},{"name":"CHOCOLATE SHAKE","qty":1,"price":699}],"adjustments":[{"kind":"discount","pct":48,"amount":1500,"step":1},{"kind":"gst","pct":16,"amount":495,"step":2}],"printedTotal":2091},
 };
 
 describe("real bills", () => {
@@ -49,15 +54,53 @@ describe("real bills", () => {
 
   it("bill-7 falls back to what was charged when the printed rate doesn't reach the total", () => {
     const { bill } = draftFrom(bills["bill-7"]!, id);
-    expect(compute(bill).gstAmt).toBe(41813);
-    expect(compute(bill).total).toBe(321313);
+    expect(bill.adj.gst).toEqual({ mode: "flat", val: "418" });
+    expect(compute(bill).total).toBe(321300);
   });
 
-  it("bill-10 does not reconcile, and is reported rather than forced", () => {
+  /*
+   * Freddy's prints 6% = 537, 50% = 3,938 and 5% = 394, and a total of 5,606.
+   * No reading of those numbers, in any order, reaches 5,606 (a search of all
+   * 13 stackings x 8 rate/amount readings; the nearest is Rs 4.60 off). So it
+   * lands on the nearest: the 3,938 discount first, then the 537 tax and the
+   * 5% service on what is left — and the editor says it's Rs 4.60 out.
+   */
+  it("bill-10 does not reconcile, so it lands on the closest reading", () => {
     const { bill, fit } = draftFrom(bills["bill-10"]!, id);
-    expect(fit).toBe("none");
-    expect(bill.printedTotal).toBe(560600);
-    expect(compute(bill).total).not.toBe(560600);
+    expect(fit).toBe("closest");
+    const t = compute(bill);
+    expect(t.total).toBe(561060);
+    expect(t.steps).toEqual([["discount"], ["service", "gst"]]);
+    expect([bill.adj.discount, bill.adj.gst, bill.adj.service]).toEqual([
+      { mode: "flat", val: "3938" }, { mode: "flat", val: "537" }, { mode: "pct", val: "5" },
+    ]);
+  });
+
+  it("bill-11 takes GST at 16% of the full subtotal and the discount as charged", () => {
+    const { bill, fit } = draftFrom(bills["bill-11"]!, id);
+    expect(fit).toBe("match");
+    const t = compute(bill);
+    expect(bill.adj.discount).toEqual({ mode: "flat", val: "1500" });
+    expect(bill.adj.gst).toEqual({ mode: "pct", val: "16" });
+    expect(t.bases.gst).toBe(309600);
+    expect(Math.round(t.total / 100)).toBe(2091);
+  });
+
+  /*
+   * What Freddy's actually charged: 50% off everything but the 895 item
+   * (3,938), then a flat 16% on the 4,832 left — a rate printed nowhere on
+   * the bill, which is why no reading of it can get there. One edit in the
+   * editor (GST 16%, clear the service charge) and it matches.
+   */
+  it("bill-10 matches once the unprinted 16% is typed in", () => {
+    const { bill } = draftFrom(bills["bill-10"]!, id);
+    const fixed = {
+      ...bill,
+      adj: { ...bill.adj, gst: { mode: "pct" as const, val: "16" }, service: { mode: "pct" as const, val: "" } },
+    };
+    const t = compute(fixed);
+    expect(t.steps).toEqual([["discount"], ["gst"]]);
+    expect(Math.abs(t.total - 560600)).toBeLessThanOrEqual(100);
   });
 
   it("never reads a suggested gratuity or a cash price as an extra", () => {

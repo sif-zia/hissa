@@ -393,6 +393,8 @@ button, input, select, textarea { font: inherit; color: inherit; }
   text-decoration: underline;
   text-decoration-style: wavy;
   text-underline-offset: 3px;
+  /* One unbroken line: skipping descenders chopped "not you?" into pieces. */
+  text-decoration-skip-ink: none;
 }
 
 /* Written-on-the-line inputs, not boxes. */
@@ -742,6 +744,18 @@ button, input, select, textarea { font: inherit; color: inherit; }
  * player. A fixed layer over the viewport does the same job everywhere.
  */
 .cam {
+  /* Paper laid over a photo is always light paper, whatever the theme: dark
+     "paper" strokes and stubs vanish into the picture. Same values as :root. */
+  --paper: #f3ecda;
+  --paper-2: #efe6d0;
+  --paper-edge: #e2d7bd;
+  --tape: rgba(214, 196, 156, 0.45);
+  --ink: #2b2925;
+  --ink-2: #55503f;
+  --ink-3: #837b66;
+  --warn: #a4483f;
+  --shadow-hard: 3px 3px 0 rgba(43, 41, 37, 0.16);
+  color: var(--ink);
   position: fixed;
   inset: 0;
   height: 100dvh;
@@ -852,3 +866,33 @@ button, input, select, textarea { font: inherit; color: inherit; }
 @media (prefers-reduced-motion: reduce) {
   .cam-ring { animation: none; }
 }
+
+/* ----------------------------------------------------------- checkbox */
+
+/* A real checkbox, drawn: an inked box on the paper, a rose tick when on.
+   The native input stays in the tree for keyboards and screen readers. */
+.check {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 44px;
+  cursor: pointer;
+  font-family: var(--hand);
+  color: var(--ink);
+  user-select: none;
+}
+.check input { position: absolute; opacity: 0; width: 1px; height: 1px; margin: 0; }
+.check-box {
+  width: 22px;
+  height: 22px;
+  flex: none;
+  display: grid;
+  place-items: center;
+  border: 1.5px solid var(--ink);
+  background: var(--paper-2);
+  box-shadow: 2px 2px 0 rgba(43, 41, 37, 0.13);
+  transform: rotate(-2deg);
+}
+.check-box svg { width: 20px; height: 20px; fill: none; stroke: var(--rose); stroke-width: 3; stroke-linecap: round; stroke-linejoin: round; }
+.check input:focus-visible + .check-box { outline: 2.5px solid var(--slate); outline-offset: 2px; }

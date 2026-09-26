@@ -421,6 +421,8 @@ Driven through the **Claude-in-Chrome extension** in the user's Chrome, with no 
 - **2.0.0**: merged in https://github.com/sif-zia/hissa/pull/1 and deployed 2026-09-26.
 - **2.0.1**: merged in https://github.com/sif-zia/hissa/pull/2. Two taps before a re-render erased each other; found on production within minutes of 2.0.0.
 
+- **2.1.0**: nearest-reading fallback; GST as an amount; the Howdy dual-tax prompt fix; a light camera layer in dark mode; the continuous link underline; the upload icon; `with items` as a checkbox.
+
 ## Still open
 
 - Real-device checks (the device matrix above): tap-to-focus and flash on Android, the iOS share sheet, installed PWA, VoiceOver/TalkBack.

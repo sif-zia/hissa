@@ -100,8 +100,8 @@ describe("draftFrom (client)", () => {
     expect(bill.steps).toEqual([["gst", "discount"]]);
   });
 
-  it("says so when nothing fits", () => {
-    expect(draftFrom(reading({ printedTotal: 9999 }), id).fit).toBe("none");
+  it("lands on the closest reading when nothing fits", () => {
+    expect(draftFrom(reading({ printedTotal: 9999 }), id).fit).toBe("closest");
   });
 
   it("reads a flat discount as flat", () => {
@@ -111,11 +111,12 @@ describe("draftFrom (client)", () => {
     expect(bill.adj.discount).toEqual({ mode: "flat", val: "250" });
   });
 
-  it("recovers a GST rate from an amount-only line", () => {
-    const { bill } = draftFrom(reading({
+  it("keeps a GST printed only as an amount as that amount", () => {
+    const { bill, fit } = draftFrom(reading({
       adjustments: [{ kind: "gst", pct: 0, amount: 480, step: 1 }], printedTotal: 3480,
     }), id);
-    expect(bill.adj.gst.val).toBe("16");
+    expect(bill.adj.gst).toEqual({ mode: "flat", val: "480" });
+    expect(fit).toBe("match");
   });
 
   it("never hands the editor an empty bill", () => {

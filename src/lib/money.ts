@@ -32,7 +32,6 @@ export interface DraftBill {
   currency: string;
   priceMode: PriceMode;
   items: DraftItem[];
-  /** GST is always a percentage; its mode is ignored. */
   adj: Record<Kind, Adj>;
   steps: Steps;
   /** The total printed on the photographed bill, minor units, if one was read. */
@@ -95,7 +94,7 @@ export function priceOf(it: DraftItem, mode: PriceMode): number {
 /** Extras with something in them. Empty rows take no part in the stacking. */
 export const active = (adj: Record<Kind, Adj>): Kind[] => KINDS.filter((k) => num(adj[k].val) > 0);
 
-const modeOf = (k: Kind, adj: Record<Kind, Adj>): AmountMode => (k === "gst" ? "pct" : adj[k].mode);
+const modeOf = (k: Kind, adj: Record<Kind, Adj>): AmountMode => adj[k].mode;
 
 /**
  * Steps restricted to the active extras, empty steps closed up. An extra the
@@ -206,6 +205,8 @@ export interface Outcome {
   total: number;
   /** Reproduces the printed total. */
   matches: boolean;
+  /** Nothing reproduces the printed total, and this comes nearest. */
+  closest: boolean;
   /** Same total as the stacking currently in use. */
   current: boolean;
 }
@@ -236,10 +237,17 @@ export function outcomes(bill: DraftBill, max = 4): { visible: Outcome[]; more: 
     steps,
     total,
     matches: printed !== undefined && printed > 0 && Math.abs(total - printed) <= MATCH_SLACK,
+    closest: false,
     current: total === cur,
   }));
+  if (printed && !all.some((o) => o.matches)) {
+    const off = (o: Outcome) => Math.abs(o.total - printed);
+    const near = all.reduce((a, b) => (off(b) < off(a) ? b : a), all[0]!);
+    near.closest = true;
+  }
   all.sort((a, b) =>
     Number(b.matches) - Number(a.matches) ||
+    Number(b.closest) - Number(a.closest) ||
     Number(b.current) - Number(a.current) ||
     simpler(a.steps, b.steps));
   return { visible: all.slice(0, max), more: all.slice(max) };
@@ -261,28 +269,42 @@ export function sentence(steps: Steps, adj: Record<Kind, Adj>): string {
 }
 
 /**
- * Settles the stacking for a photographed bill. The model's reading is used
- * when it reproduces the printed total; otherwise every arrangement is tried
- * and the closest one within a rupee wins; otherwise the model's reading
- * stands and the editor says the numbers don't meet.
+ * Settles a photographed bill: which reading of each extra (its printed
+ * rate or its printed amount — `variants`, in order of preference) and
+ * which stacking. The first variant with a stacking that reproduces the
+ * printed total within a rupee wins, the model's own stacking first. When
+ * nothing does, the closest total wins: a bill that doesn't add up still
+ * lands on the nearest honest reading, and the editor says how far off.
  */
 export function detect(
   bill: DraftBill,
   llmSteps: Steps,
-): { steps: Steps; fit: "match" | "none" | "unknown" } {
-  const act = active(bill.adj);
-  const said = normalise(llmSteps, act);
+  variants: Record<Kind, Adj>[] = [bill.adj],
+): { adj: Record<Kind, Adj>; steps: Steps; fit: "match" | "closest" | "unknown" } {
+  const first = variants[0] ?? bill.adj;
   const printed = bill.printedTotal;
-  if (!printed) return { steps: said, fit: "unknown" };
+  if (!printed) return { adj: first, steps: normalise(llmSteps, active(first)), fit: "unknown" };
 
   const subtotal = compute(bill).subtotal;
-  const off = (st: Steps) => Math.abs(apply(subtotal, bill.adj, st).total - printed);
-  if (off(said) <= MATCH_SLACK) return { steps: said, fit: "match" };
+  interface C { adj: Record<Kind, Adj>; steps: Steps; off: number; v: number; said: boolean }
+  // An exact reading: plainer extras first, then the model's stacking, then the plainest.
+  const betterExact = (a: C, b: C) =>
+    a.v - b.v || Number(b.said) - Number(a.said) || a.off - b.off || simpler(a.steps, b.steps);
+  // No exact reading: nearest first.
+  const betterNear = (a: C, b: C) =>
+    a.off - b.off || a.v - b.v || Number(b.said) - Number(a.said) || simpler(a.steps, b.steps);
 
-  let best: Steps | null = null;
-  for (const st of arrangements(act)) {
-    if (off(st) > MATCH_SLACK) continue;
-    if (!best || off(st) < off(best) || (off(st) === off(best) && simpler(st, best) < 0)) best = st;
-  }
-  return best ? { steps: best, fit: "match" } : { steps: said, fit: "none" };
+  let exact = null as C | null;
+  let near = null as C | null;
+  variants.forEach((adj, v) => {
+    const act = active(adj);
+    const said = normalise(llmSteps, act);
+    [said, ...arrangements(act)].forEach((steps, i) => {
+      const c: C = { adj, steps, off: Math.abs(apply(subtotal, adj, steps).total - printed), v, said: i === 0 };
+      if (c.off <= MATCH_SLACK && (!exact || betterExact(c, exact) < 0)) exact = c;
+      if (!near || betterNear(c, near) < 0) near = c;
+    });
+  });
+  const pick = (exact ?? near)!;
+  return { adj: pick.adj, steps: pick.steps, fit: exact ? "match" : "closest" };
 }
