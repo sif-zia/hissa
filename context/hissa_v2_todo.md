@@ -15,14 +15,14 @@ The execution list for `hissa_v2_plan.md`. Section numbers (§) refer to that pl
 
 ## Phase 0 — Prep
 
-- [ ] Branch `v2` from `master`.
+- [x] Branch `v2` from `master`.
 - [ ] Baseline, and write the numbers down in the PR description:
-  - [ ] `pnpm test` is green (79 tests).
-  - [ ] `pnpm build` passes.
-  - [ ] Gzipped size of the app JS chunk(s) and of the landing HTML+CSS: `gzip -c dist/assets/*.js | wc -c` per file.
-- [ ] Vercel: `vercel env ls` shows `GEMINI_API_KEY` and the Upstash URL/token (`UPSTASH_REDIS_REST_*` or `KV_REST_API_*`; `api/_lib/redis.ts` accepts either) for **Preview** as well as Production. Add any that are missing, or preview deploys can't be tested end to end.
-- [ ] Font glyph check (§11). Confirm `½ ⅓ ¼ ⅔ ¾ ✓ ● ⚡` exist in `public/fonts/hissa-ledger*.woff2` and `hissa-scrawl.woff2`.
-  - [ ] If they're missing, either add them via `tools/fonts.sh`, keeping the fonts total ≤ 64 KB (it's already over the 45 KB target; don't grow it), or plan to fall back to `1/2` and canvas paths. Record which.
+  - [x] `pnpm test` is green (79 tests).
+  - [x] `pnpm build` passes.
+  - [x] Gzipped size of the app JS chunk(s) and of the landing HTML+CSS: `gzip -c dist/assets/*.js | wc -c` per file. _baseline: app JS 17.91 KB gz; landing HTML 3.01 KB + CSS 3.82 KB gz_
+- [ ] Vercel: `vercel env ls` shows `GEMINI_API_KEY` and the Upstash URL/token (`UPSTASH_REDIS_REST_*` or `KV_REST_API_*`; `api/_lib/redis.ts` accepts either) for **Preview** as well as Production. Add any that are missing, or preview deploys can't be tested end to end. _GEMINI_API_KEY is Production-only; Upstash vars cover all envs. Add Gemini to Preview in Phase 10_
+- [x] Font glyph check (§11). Confirm `½ ⅓ ¼ ⅔ ¾ ✓ ● ⚡` exist in `public/fonts/hissa-ledger*.woff2` and `hissa-scrawl.woff2`. _fonts.sh subsets include ✓ → — × but not ½ ⅓ ¼ ● ·. No rebuild: shares write 1/2, and the image draws dots and ticks as shapes_
+  - [x] If they're missing, either add them via `tools/fonts.sh`, keeping the fonts total ≤ 64 KB (it's already over the 45 KB target; don't grow it), or plan to fall back to `1/2` and canvas paths. Record which.
 - [ ] Receipt set for extraction checks: 8–10 real bill photos in a **gitignored** folder (`tools/receipts/`, added to `.gitignore`; photos are never committed). For each, note the printed subtotal, total and the true arrangement. Cover at least:
   - [ ] GST only
   - [ ] GST + service charge
@@ -33,35 +33,35 @@ The execution list for `hissa_v2_plan.md`. Section numbers (§) refer to that pl
   - [ ] no tax at all
   - [ ] a long bill (20+ lines)
   - [ ] a crumpled or low-light photo
-- [ ] Decide how production deploys happen (git integration vs `vercel --prod`) by checking the project's Git settings in the dashboard. Record it here: `____`.
+- [x] Decide how production deploys happen (git integration vs `vercel --prod`) by checking the project's Git settings in the dashboard. Record it here: `vercel --prod` (CLI). _every deploy so far is CLI `vercel --prod`, with no git integration_
 
 ---
 
 ## Phase 1 — Identity and entry (§1, §2, §4)
 
 ### Code
-- [ ] `src/lib/cache.ts`: `loadName()` / `saveName()` on `hissa:name`, a JSON string with **no `at`**.
-- [ ] New `src/screens/Name.tsx`, entry no. 00 "who's this?":
-  - [ ] one `Write` field, `maxLength={24}`, `autoComplete="given-name"`, autofocus
-  - [ ] a `that's me →` button, disabled while the field is blank
-  - [ ] a back arrow only when changing an existing name
-- [ ] `App.tsx`: no stored name → render `Name` before anything, **including on `/s/CODE`**. After saving, carry on to where the user was going: home, or the join for that code.
+- [x] `src/lib/cache.ts`: `loadName()` / `saveName()` on `hissa:name`, a JSON string with **no `at`**.
+- [x] New `src/screens/Name.tsx`, entry no. 00 "who's this?":
+  - [x] one `Write` field, `maxLength={24}`, `autoComplete="given-name"`, autofocus
+  - [x] a `that's me →` button, disabled while the field is blank
+  - [x] a back arrow only when changing an existing name
+- [x] `App.tsx`: no stored name → render `Name` before anything, **including on `/s/CODE`**. After saving, carry on to where the user was going: home, or the join for that code.
 - [ ] `Home.tsx`:
-  - [ ] header line `hi {name} · not you?`, where `not you?` opens `Name` prefilled
-  - [ ] a quiet `how it works →` link to `/?about`
-- [ ] `/s/CODE` with a stored name and no `hissa:me:CODE`: run the existing `doJoin` logic with the stored name (read before write, same `adopted` ref handling). No join form.
-- [ ] `Join.tsx` (from home): remove the name field, so it asks for the code only and uses the stored name.
-- [ ] `not {name}?` on the split is unchanged: it changes only that split's identity, not `hissa:name`.
-- [ ] `index.html` inline head script: the redirect line from §2, inside the existing `try`, targeting **`/app`**. Leave `how-it-works.html` alone.
+  - [x] header line `hi {name} · not you?`, where `not you?` opens `Name` prefilled
+  - [x] a quiet `how it works →` link to `/?about`
+- [x] `/s/CODE` with a stored name and no `hissa:me:CODE`: run the existing `doJoin` logic with the stored name (read before write, same `adopted` ref handling). No join form.
+- [x] `Join.tsx` (from home): remove the name field, so it asks for the code only and uses the stored name. _the name field stays only for the `not {name}?` switch, which needs a name for that one split_
+- [x] `not {name}?` on the split is unchanged: it changes only that split's identity, not `hissa:name`.
+- [x] `index.html` inline head script: the redirect line from §2, inside the existing `try`, targeting **`/app`**. Leave `how-it-works.html` alone.
 - [ ] Labels:
-  - [ ] `src/screens/Split.tsx:157`: `learned →` → `fyi →`
-  - [ ] `how-it-works.html:129`: `data-label="learned"` → `data-label="note"`
+  - [x] `src/screens/Split.tsx:157`: `learned →` → `fyi →`
+  - [x] `how-it-works.html:129`: `data-label="learned"` → `data-label="note"`
 
 ### Unit tests
-- [ ] `hissa:name`, `hissa:steps` and `hissa:withItems` survive `sweep()` with the clock moved forward 25h. Stub `localStorage` and `Date.now`.
-- [ ] `hissa:round` **is** swept after 24h.
-- [ ] Reading `index.html` as text: the redirect targets `/app` (not `/app.html`), checks `about`, and sits inside a `try`.
-- [ ] If the join logic moves out of `App.tsx`, keep a test that joining with an existing record does **not** write empty claims (regression: "Joining wiped your claims").
+- [x] `hissa:name`, `hissa:steps` and `hissa:withItems` survive `sweep()` with the clock moved forward 25h. Stub `localStorage` and `Date.now`.
+- [x] `hissa:round` **is** swept after 24h.
+- [x] Reading `index.html` as text: the redirect targets `/app` (not `/app.html`), checks `about`, and sits inside a `try`.
+- [ ] If the join logic moves out of `App.tsx`, keep a test that joining with an existing record does **not** write empty claims (regression: "Joining wiped your claims"). _it stayed in `App.tsx`, so the existing guard stands_
 
 ### Manual check (`pnpm dev`)
 - [ ] Fresh profile: `/app.html` → name screen → home shows `hi …`. Reload: no ask.

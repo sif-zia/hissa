@@ -49,7 +49,9 @@ export default defineConfig({
       workbox: {
         globPatterns: ["**/*.{js,css,woff2}", "app.html"],
         navigateFallback: "/app.html",
-        navigateFallbackDenylist: [/^\/$/, /^\/how-it-works/, /^\/api\//],
+        // Workbox matches pathname + search, so "/?about" needs its own allowance
+        // or the service worker answers the landing page with the app shell.
+        navigateFallbackDenylist: [/^\/(\?.*)?$/, /^\/how-it-works/, /^\/api\//],
       },
     }),
   ],

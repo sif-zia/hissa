@@ -154,7 +154,7 @@ export function Split({
 
       <p class="scrawl dim small" style={{ marginTop: 20 }}>
         {live
-          ? "learned → other people's taps land within about five seconds."
+          ? "fyi → other people's taps land within about five seconds."
           : "this split has been open a while → hit refresh to pull in anything new."}
       </p>
 

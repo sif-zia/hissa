@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from "preact/hooks";
 import { useLocation, useRoute } from "wouter-preact";
 
 import { Home } from "./screens/Home";
+import { Name } from "./screens/Name";
 import { Capture } from "./screens/Capture";
 import { Preview } from "./screens/Preview";
 import { Editor } from "./screens/Editor";
@@ -16,7 +17,7 @@ import { identityOf, uid, type Identity } from "./lib/identity";
 import type { Claims } from "./lib/split";
 import type { Shot } from "./lib/image";
 import { createBill, extract, fetchBill, putClaims, setSplitUnclaimed, ApiError } from "./lib/api";
-import { loadMe, saveMe, forgetMe, sweep } from "./lib/cache";
+import { loadMe, saveMe, forgetMe, sweep, loadName, saveName } from "./lib/cache";
 import { share, copy, buzz } from "./lib/share";
 import { useBillSync } from "./hooks/useBillSync";
 
@@ -48,10 +49,12 @@ export function App() {
   const [me, setMe] = useState<Identity | null>(null);
   const [mine, setMine] = useState<Claims>({});
 
-  const [hostName, setHostName] = useState("");
+  const [myName, setMyName] = useState(loadName);
+  const [renaming, setRenaming] = useState(false);
   const [billName, setBillName] = useState("");
   const [joinCode, setJoinCode] = useState("");
-  const [joinName, setJoinName] = useState("");
+  /** Set only while switching identity on one split; null means "use myName". */
+  const [joinName, setJoinName] = useState<string | null>(null);
 
   const sync = useBillSync(code);
 
@@ -64,6 +67,8 @@ export function App() {
 
   /* --- landing on /s/CODE: remember who I am, or ask --------------------- */
 
+  // A stored name means a shared link joins straight in: no form, no typing.
+  const autoJoined = useRef<string | null>(null);
   useEffect(() => {
     if (!code) {
       setMe(null);
@@ -73,11 +78,16 @@ export function App() {
     const known = loadMe(code);
     if (known) {
       setMe(known);
+    } else if (myName && autoJoined.current !== code) {
+      autoJoined.current = code;
+      void doJoin(code, myName);
     } else {
       setJoinCode(code);
       setScreen("join");
     }
-  }, [code]);
+    // doJoin is recreated every render; the code and name are what matter.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [code, myName]);
 
   /*
    * Two ways in, one owner of `mine`.
@@ -131,8 +141,7 @@ export function App() {
 
   const openSplit = async () => {
     if (!bill) return;
-    const who = identityOf(hostName);
-    if (!who.name) { setErr("Put your name in first."); return; }
+    const who = identityOf(myName);
     setBusy(true);
     setErr("");
     try {
@@ -162,9 +171,9 @@ export function App() {
     setBusy(false);
   };
 
-  const doJoin = async () => {
-    const c = joinCode.trim().toUpperCase().replace(/[^A-Z0-9]/g, "");
-    const who = identityOf(joinName);
+  const doJoin = async (rawCode: string, rawName: string) => {
+    const c = rawCode.trim().toUpperCase().replace(/[^A-Z0-9]/g, "");
+    const who = identityOf(rawName);
     if (!c || !who.name) { setErr("Both the code and your name are needed."); return; }
     setBusy(true);
     setErr("");
@@ -182,10 +191,14 @@ export function App() {
       adopted.current = who.key; // this fetch is fresher than any pending poll
       setMe(who);
       setMine(existing?.claims ?? {});
+      setJoinName(null);
       setScreen("home");
       navigate(`/s/${c}`);
     } catch (e) {
       setErr(e instanceof ApiError ? e.message : `No split found with code ${c}.`);
+      // An auto-join that failed lands on the form, so the code can be fixed.
+      setJoinCode(c);
+      setScreen("join");
     }
     setBusy(false);
   };
@@ -250,7 +263,7 @@ export function App() {
 
   const goHome = () => {
     setBill(null); setShot(null); setErr(""); setSuspect(false);
-    setHostName(""); setBillName(""); setJoinCode(""); setJoinName("");
+    setBillName(""); setJoinCode(""); setJoinName(null);
     setScreen("home");
     navigate("/");
   };
@@ -258,6 +271,21 @@ export function App() {
   /* --- render ------------------------------------------------------------ */
 
   const t = bill ? compute(bill) : null;
+
+  if (!myName || renaming) {
+    return (
+      <Name
+        initial={myName}
+        onBack={renaming ? () => setRenaming(false) : undefined}
+        onSave={(n) => {
+          const clean = identityOf(n).name;
+          saveName(clean);
+          setMyName(clean);
+          setRenaming(false);
+        }}
+      />
+    );
+  }
 
   if (code && me && sync.state) {
     return (
@@ -305,6 +333,8 @@ export function App() {
     <>
       {screen === "home" && (
         <Home
+          name={myName}
+          onRename={() => setRenaming(true)}
           onCamera={() => { setErr(""); setScreen("camera"); }}
           onManual={() => { setErr(""); setBill(blank()); setScreen("editor"); }}
           onJoin={() => { setErr(""); setScreen("join"); }}
@@ -354,7 +384,6 @@ export function App() {
 
       {screen === "start" && (
         <Start
-          hostName={hostName} setHostName={setHostName}
           billName={billName} setBillName={setBillName}
           onGo={openSplit} onBack={() => setScreen("editor")}
           busy={busy} error={err}
@@ -364,8 +393,9 @@ export function App() {
       {screen === "join" && (
         <Join
           code={joinCode} setCode={setJoinCode}
-          name={joinName} setName={setJoinName}
-          onGo={doJoin} onBack={goHome}
+          name={joinName ?? undefined}
+          setName={joinName === null ? undefined : setJoinName}
+          onGo={() => doJoin(joinCode, joinName ?? myName)} onBack={goHome}
           busy={busy} error={err}
         />
       )}

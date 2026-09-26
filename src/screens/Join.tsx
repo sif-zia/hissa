@@ -6,8 +6,10 @@ export function Join({
 }: {
   code: string;
   setCode: (v: string) => void;
-  name: string;
-  setName: (v: string) => void;
+  /** Only when switching identity on one split ("not faraz?"). Otherwise the
+   *  stored name is used and nobody types it again. */
+  name?: string;
+  setName?: (v: string) => void;
   onGo: () => void;
   onBack: () => void;
   busy: boolean;
@@ -38,6 +40,7 @@ export function Join({
             setCode((e.target as HTMLInputElement).value.toUpperCase().replace(/[^A-Z0-9]/g, ""))
           }
         />
+        {setName ? (
         <Write
           label="your name"
           placeholder="sara"
@@ -47,13 +50,14 @@ export function Join({
           hint="same name as last time puts you back on your own claims"
           onInput={(e) => setName((e.target as HTMLInputElement).value)}
         />
+        ) : null}
       </div>
 
       <button
         class="btn"
         style={{ ...tiltStyle("go-join", "card"), marginTop: 34 }}
         onClick={onGo}
-        disabled={busy || !code.trim() || !name.trim()}
+        disabled={busy || !code.trim() || (setName ? !name?.trim() : false)}
       >
         {busy ? "looking…" : "join"}
       </button>

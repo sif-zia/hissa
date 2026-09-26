@@ -55,6 +55,11 @@
       // Inline and before paint: a stored theme must not arrive after the
       // first frame. This is the only script on these pages.
       try {
+        // Someone who has used the app before goes straight to it; the story
+        // is one link away at /?about. Bare /app: cleanUrls 308s the .html form.
+        if (localStorage.getItem("hissa:name") && !/[?&]about\b/.test(location.search)) {
+          location.replace("/app");
+        }
         document.documentElement.setAttribute(
           "data-theme",
           localStorage.getItem("hissa:theme") || "light",
