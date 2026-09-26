@@ -6,3 +6,6 @@ dist/
 .vercel
 test_bills/
 *.swp
+
+# Local admin: resets production photo-read limits with the Redis creds in .env.local.
+tools/reset-limits.mjs
