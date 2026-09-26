@@ -423,6 +423,8 @@ Driven through the **Claude-in-Chrome extension** in the user's Chrome, with no 
 
 - **2.1.0**: nearest-reading fallback; GST as an amount; the Howdy dual-tax prompt fix; a light camera layer in dark mode; the continuous link underline; the upload icon; `with items` as a checkbox.
 
+- **2.1.1**: `/api/extract` moved from Edge to Node. Edge's 25s first-byte limit killed a slow Gemini read in production.
+
 ## Still open
 
 - Real-device checks (the device matrix above): tap-to-focus and flash on Android, the iOS share sheet, installed PWA, VoiceOver/TalkBack.

@@ -6,9 +6,9 @@
  * writes back exactly one changed boolean.
  */
 
-import { handler, readJson, json, codeFrom, HttpError } from "../../_lib/http";
-import { billKey, writeField } from "../../_lib/redis";
-import { loadBill, etagOf } from "../../_lib/bill";
+import { handler, readJson, json, codeFrom, HttpError } from "../../_lib/http.js";
+import { billKey, writeField } from "../../_lib/redis.js";
+import { loadBill, etagOf } from "../../_lib/bill.js";
 
 export const config = { runtime: "edge" };
 

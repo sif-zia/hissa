@@ -4,7 +4,7 @@
  * editor — is unit-tested without calling Gemini.
  */
 
-import { clampStr, clampPct } from "./http";
+import { clampStr, clampPct } from "./http.js";
 
 export const KINDS = ["service", "gst", "discount", "tip"] as const;
 export type Kind = (typeof KINDS)[number];

@@ -5,11 +5,17 @@
  * The photo is used for one request and never stored.
  */
 
-import { handler, readJson, json, HttpError } from "./_lib/http";
-import { cmd } from "./_lib/redis";
-import { shapeReading, KINDS, type Raw } from "./_lib/reading";
+import { handler, readJson, json, HttpError } from "./_lib/http.js";
+import { cmd } from "./_lib/redis.js";
+import { shapeReading, KINDS, type Raw } from "./_lib/reading.js";
 
-export const config = { runtime: "edge" };
+/*
+ * Node.js, not Edge. An Edge function must send its first byte within 25s,
+ * and a slow Gemini read blew through that in production — the function was
+ * killed mid-read. Node allows minutes; a slow read is a wait, not a failure.
+ * The bill endpoints are fast Redis round trips and stay on Edge.
+ */
+export const config = { maxDuration: 60 };
 
 /**
  * Overridable without a redeploy, because models get retired: the spec's
@@ -95,7 +101,7 @@ async function throttle(req: Request): Promise<void> {
 }
 
 
-export default handler(async (req) => {
+export const POST = handler(async (req) => {
   if (req.method !== "POST") throw new HttpError("Method not allowed.", 405);
 
   const key = process.env.GEMINI_API_KEY;
