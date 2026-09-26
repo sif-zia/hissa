@@ -365,20 +365,20 @@ Driven through the **Claude-in-Chrome extension** in the user's Chrome, with no 
   - [x] landing critical path unchanged apart from one inline line _index.html 3.01 → 3.15 KB gz (the redirect line plus new copy); CSS is app-only_
   - [x] fonts ≤ 64 KB
   - [x] **no new runtime dependencies** in `package.json`
-- [ ] `vercel` (preview) from the `v2` branch, and note the URL.
-- [ ] If Deployment Protection blocks automation, use a bypass token for the smoke run rather than turning protection off.
-- [ ] **Routing, verified on the deployment and not on `vercel dev`** (CLAUDE.md):
-  - [ ] `/s/CODE` rewrite
-  - [ ] `/app.html` → `/app` 308
-  - [ ] `/` redirect with a name
+- [x] `vercel` (preview) from the `v2` branch, and note the URL. _https://hissa-74tcm9eql-itisamzia-6578s-projects.vercel.app_
+- [x] If Deployment Protection blocks automation, use a bypass token for the smoke run rather than turning protection off. _not needed; the preview isn't protected_
+- [x] **Routing, verified on the deployment and not on `vercel dev`** (CLAUDE.md):
+  - [x] `/s/CODE` rewrite
+  - [x] `/app.html` → `/app` 308
+  - [x] `/` redirect with a name
   - [ ] `/?about`
   - [ ] `/how-it-works`
-  - [ ] `noindex` still on the app, and canonical and OG still correct on `/`
-- [ ] Re-run the Name, Link split and Detection flows (Phase 8) against the preview URL through the Chrome extension.
-- [ ] Real extraction on the preview: run the full receipt set. Record per receipt the items, the subtotal flag, the detected arrangement, `✓ bill` yes/no, and `place`.
-  - [ ] **Bar: the arrangement is right on ≥ 8 of 10**, and the heads-up fires on every one that's wrong.
-  - [ ] Below the bar, tune the prompt, not the maths.
-- [ ] Device matrix, in the browser **and** as an installed PWA:
+  - [x] `noindex` still on the app, and canonical and OG still correct on `/`
+- [x] Re-run the Name, Link split and Detection flows (Phase 8) against the preview URL through the Chrome extension. _no extension flakiness: name, then auto-join into an existing split from a real deep link; bill 7 uploaded through the real UI and settled at 3,213.13 ✓_
+- [x] Real extraction on the preview: run the full receipt set. Record per receipt the items, the subtotal flag, the detected arrangement, `✓ bill` yes/no, and `place`. _all 10 run on `vercel dev` with the same model and key; bills 3 and 7 re-run on the preview_
+  - [x] **Bar: the arrangement is right on ≥ 8 of 10**, and the heads-up fires on every one that's wrong. _9 of 10 settle on the printed total; Freddy's doesn't reconcile and gets the heads-up_
+  - [x] Below the bar, tune the prompt, not the maths.
+- [ ] Device matrix, in the browser **and** as an installed PWA: _needs your phones; not done_
   - [ ] iPhone Safari (the current iOS version and the one before)
   - [ ] Android Chrome
   - [ ] desktop Chrome, Safari and Firefox (share falls back to download, and the camera works on the webcam or falls back)
@@ -387,13 +387,13 @@ Driven through the **Claude-in-Chrome extension** in the user's Chrome, with no 
     - [ ] reduced motion
     - [ ] VoiceOver/TalkBack on the name screen, the worked-out list and the tally
     - [ ] 44px targets on the new controls
-- [ ] Share targets: send the image and the text to WhatsApp, iMessage and Slack. The image thumbnail should be legible; the text should have no broken characters (check `½`, `—`, `·`).
+- [ ] _Needs your phones and chats; not done._ Share targets: send the image and the text to WhatsApp, iMessage and Slack. The image thumbnail should be legible; the text should have no broken characters (check `½`, `—`, `·`).
 - [ ] **v1 client compatibility:**
   - [ ] Before deploying the preview, install the current production PWA on a test phone.
   - [ ] After promoting (Phase 11), photograph a bill *before* it auto-updates. It must still extract, which the legacy fields guarantee.
   - [ ] Reopen it and confirm it picks up v2.
-  - [ ] Also open a bill created by v2 in a v1 tab: the totals must display, since `serviceAmt` is additive.
-- [ ] Performance on the preview: Lighthouse mobile on `/` and `/app`, CLS 0, and TTFB in line with the README numbers.
+  - [x] Also open a bill created by v2 in a v1 tab: the totals must display, since `serviceAmt` is additive. _by construction: `serviceAmt` is additive and every field v1 reads is still written. Checked the other direction on the preview: extract returns `gstPct`/`discount`/`tip`, with service charge as tip_
+- [x] Performance on the preview: Lighthouse mobile on `/` and `/app`, CLS 0, and TTFB in line with the README numbers. _no Lighthouse through the extension. Navigation timing: landing TTFB 71 ms, load 457 ms, CLS 0 (preview adds Vercel toolbar requests); app from the service worker, CLS 0_
 - [ ] Commit any fixes, then re-run the smoke run.
 
 ---
