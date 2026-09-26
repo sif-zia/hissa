@@ -66,7 +66,7 @@ These come from the spec's maths and data model and are the things most likely t
 
 ## Offline
 
-Everything but the server works offline: the precached app shell, manual entry, equal split, pass the phone, the share card and copy. Reading a photo and live link splits need the network. Say so *before* the attempt where the browser knows (`useOnline`: "take a pic" offers "enter it manually"; the chooser disables "share the link"), and name it honestly after a failed attempt where it didn't (`api.ts` turns a rejected `fetch` into `ApiError` with status `OFFLINE`, distinct from a server's own error). A failed read keeps the photo on the preview so it can be read once the connection is back. `/` is network-first with the app shell as its offline fallback.
+Everything but the server works offline: the precached app shell, manual entry, equal split, pass the phone, the share card and copy. Reading a photo and live link splits need the network. Say so *before* the attempt where the browser knows (`useOnline`: "take a pic" and "join a split" say so and offer "enter it manually"; the chooser disables "share the link"), and name it honestly after a failed attempt where it didn't (`api.ts` turns a rejected `fetch` into `ApiError` with status `OFFLINE`, distinct from a server's own error). A failed read keeps the photo on the preview so it can be read once the connection is back. `/` is network-first with the app shell as its offline fallback.
 
 ## Extraction
 

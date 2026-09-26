@@ -4,10 +4,10 @@ import { recentCodes } from "../lib/cache";
 
 /** Three equally weighted ways in, no hierarchy games. Spec §2.1. */
 export function Home({
-  name, onRename, onCamera, onManual, onJoin, onResume, round, cameraOffline,
+  name, onRename, onCamera, onManual, onJoin, onResume, round, needsNet,
 }: {
-  /** "take a pic" was tapped offline. */
-  cameraOffline: boolean;
+  /** A choice that needs the network was tapped offline, and which. */
+  needsNet: "camera" | "join" | null;
   /** An unfinished pass-the-phone round on this device. */
   round: { label: string; open: () => void } | null;
   name: string;
@@ -36,14 +36,7 @@ export function Home({
           <b>take a pic</b>
           <span class="dim small">snap the receipt, the lines fill themselves in</span>
         </button>
-        {cameraOffline ? (
-          <div class="sticky" role="alert" style={{ "--tilt": "-1.1deg" }}>
-            <p class="scrawl" style={{ margin: 0, color: "var(--warn)" }}>
-              no internet → reading a photo needs a connection. everything else works offline.
-            </p>
-            <button class="btn" style={{ marginTop: 12 }} onClick={onManual}>enter it manually</button>
-          </div>
-        ) : null}
+        {needsNet === "camera" ? <Offline what="reading a photo" onManual={onManual} /> : null}
         <button class="choice" style={tiltStyle("home-man", "card")} onClick={onManual}>
           <b>enter manually</b>
           <span class="dim small">type the items yourself</span>
@@ -52,6 +45,7 @@ export function Home({
           <b>join a split</b>
           <span class="dim small">someone sent you a code</span>
         </button>
+        {needsNet === "join" ? <Offline what="joining a split" onManual={onManual} /> : null}
       </div>
 
       {recent.length || round ? (
@@ -86,5 +80,20 @@ export function Home({
         <a class="link" href="/?about">how it works →</a>
       </p>
     </Sheet>
+  );
+}
+
+/**
+ * Said under the choice that was tapped, before anything is attempted. Manual
+ * entry and pass the phone need no network, so that is the way out.
+ */
+function Offline({ what, onManual }: { what: string; onManual: () => void }) {
+  return (
+    <div class="sticky" role="alert" style={{ "--tilt": "-1.1deg" }}>
+      <p class="scrawl" style={{ margin: 0, color: "var(--warn)" }}>
+        no internet → {what} needs a connection. entering a bill and passing the phone work offline.
+      </p>
+      <button class="btn" style={{ marginTop: 12 }} onClick={onManual}>enter it manually</button>
+    </div>
   );
 }
