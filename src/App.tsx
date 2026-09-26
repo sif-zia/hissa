@@ -21,7 +21,8 @@ import { draftFrom, rememberedSteps, rememberSteps } from "./lib/reading";
 import { identityOf, uid, dayMeal, type Identity } from "./lib/identity";
 import { toggleClaim, bumpClaim, type Claims } from "./lib/split";
 import type { Shot } from "./lib/image";
-import { createBill, extract, fetchBill, putClaims, setSplitUnclaimed, ApiError, OFFLINE } from "./lib/api";
+import { createBill, extract, fetchBill, fetchUsage, putClaims, setSplitUnclaimed, ApiError, LimitError, OFFLINE } from "./lib/api";
+import { loadUsage, saveUsage, blockedLocally, limitMessage } from "./lib/usage";
 import { useOnline } from "./hooks/useOnline";
 import { loadMe, saveMe, forgetMe, sweep, loadName, saveName } from "./lib/cache";
 import { share, copy, buzz } from "./lib/share";
@@ -74,8 +75,11 @@ export function App() {
 
   const sync = useBillSync(code);
   const online = useOnline();
-  /** Something that needs the network was tapped without one: say which. */
-  const [needsNet, setNeedsNet] = useState<"camera" | "join" | null>(null);
+  /** A choice that can't go ahead: no network for it, or photos used up. */
+  const [needsNet, setNeedsNet] = useState<"camera" | "join" | "limit" | null>(null);
+  const [limitMsg, setLimitMsg] = useState("");
+  /** Asking the server before opening the camera (only when we think it's no). */
+  const [checking, setChecking] = useState(false);
   const offline = (e: unknown) => e instanceof ApiError && e.status === OFFLINE;
 
   /* Pass the phone: one round at a time, saved on every tap. */
@@ -143,9 +147,17 @@ export function App() {
       setSuspect(Boolean(out.suspect));
       setPlace(out.place ?? "");
       // The editor re-derives the fit live, so only the settled bill is kept.
+      saveUsage(out.usage);
       setBill(draftFrom(out, uid).bill);
       setScreen("editor");
     } catch (e) {
+      if (e instanceof LimitError) {
+        // Refused before anything was spent. Keep the photo; offer typing.
+        saveUsage(e.usage);
+        setErr(limitMessage(e.usage));
+        setBusy(false);
+        return;
+      }
       if (offline(e)) {
         // Keep the photo: it can be read the moment the connection is back.
         setErr("no internet → reading a photo needs a connection. try again when you're back, or type the lines in.");
@@ -411,9 +423,39 @@ export function App() {
             setErr("");
             if (!online) { setNeedsNet("camera"); return; }
             setNeedsNet(null);
-            setScreen("camera");
+            // Stale-while-revalidate: open the camera at once unless we last
+            // heard "no", and let the server's answer overrule either way.
+            const known = loadUsage();
+            const blocked = blockedLocally(known);
+            if (blocked) setChecking(true);
+            else setScreen("camera");
+            fetchUsage().then(
+              (u) => {
+                saveUsage(u);
+                if (u.allowed) {
+                  if (blocked) setScreen("camera");
+                  return;
+                }
+                setLimitMsg(limitMessage(u));
+                setNeedsNet("limit");
+                // Only pull them out of the viewfinder, never out of a photo.
+                setScreen((s) => (s === "camera" ? "home" : s));
+              },
+              () => {
+                // Couldn't ask. Go by what we knew; /api/extract decides anyway.
+                if (blocked && known) { setLimitMsg(limitMessage(known)); setNeedsNet("limit"); }
+              },
+            ).finally(() => setChecking(false));
           }}
-          needsNet={online ? null : needsNet}
+          checking={checking}
+          notice={
+            needsNet === "limit" ? limitMsg
+              : online ? ""
+              : needsNet === "camera" ? "no internet → reading a photo needs a connection. entering a bill and passing the phone work offline."
+              : needsNet === "join" ? "no internet → joining a split needs a connection. entering a bill and passing the phone work offline."
+              : ""
+          }
+          noticeUnder={needsNet === "join" ? "join" : "camera"}
           onManual={() => { setErr(""); setNeedsNet(null); setBill(blank()); setScreen("editor"); }}
           onJoin={() => {
             setErr("");

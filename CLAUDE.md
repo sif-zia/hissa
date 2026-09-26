@@ -68,6 +68,12 @@ These come from the spec's maths and data model and are the things most likely t
 
 Everything but the server works offline: the precached app shell, manual entry, equal split, pass the phone, the share card and copy. Reading a photo and live link splits need the network. Say so *before* the attempt where the browser knows (`useOnline`: "take a pic" and "join a split" say so and offer "enter it manually"; the chooser disables "share the link"), and name it honestly after a failed attempt where it didn't (`api.ts` turns a rejected `fetch` into `ApiError` with status `OFFLINE`, distinct from a server's own error). A failed read keeps the photo on the preview so it can be read once the connection is back. `/` is network-first with the app shell as its offline fallback.
 
+## Photo reads are rationed
+
+Five per device per 24 hours (`api/_lib/usage.ts`), enforced where the money is spent: `/api/extract` does `INCR` before calling Gemini, refuses past the limit, and hands the read back (`DECR`) when it's refused or Gemini fails. The device is a random id the server mints into an `HttpOnly; Secure; SameSite=Strict` cookie scoped to `/api`; page code can't read or forge it, but clearing cookies resets it, so two backstops bound the cost: 30 per network (generous, because carriers put thousands of phones behind one IP) and 500 a day across everyone. Keys carry `VERCEL_ENV`, so dev and preview never spend production's counts.
+
+`/api/usage` answers the same question without spending, for "take a pic": the app opens the camera at once unless it last heard "no" (or "0 remaining"), and the server's answer overrules either way. That check is advice; the server is the gate. A Redis outage lets reads through: counting is best-effort, reading bills is the product.
+
 ## Extraction
 
 Gemini Flash on the AI Studio free tier while building; a paid key behind the Worker before any external user touches it (the free tier's training clause, not its rate limit, is the blocker). Non-negotiables: resize client-side to 1,400 px long side / JPEG 0.75 before upload, use `responseMimeType: "application/json"` with a `responseSchema` rather than parsing prose, set `thinkingConfig.thinkingBudget: 0`, validate line sums against the printed subtotal, always show the human review screen, and never retain the photo.
@@ -91,6 +97,7 @@ Each of these was a real bug found by running the app, not a hypothetical:
 - **Upstash batches** go to `/multi-exec`, not the base URL. Posting to the root fails with "unsupported arg type".
 - **`cleanUrls` 308s `/app.html` → `/app`**, so the rewrite target must be `/app` or the code in the URL is thrown away.
 - **The poll ran at ~2x.** Keying the timer effect on `state` tore it down on every arriving claim. It is keyed on the bill's open time now.
+- **The fifth read said "allowed".** It was — that read. With 0 remaining the app still opened the camera for a sixth before the server said no; "0 remaining" now counts as blocked locally.
 - **A failed read left no message.** It set an error and moved to an empty editor that never rendered it. The editor shows it now, and an offline failure stays on the photo.
 - **`/` offline was the browser's error page**, because the landing is deliberately not precached. It is network-first with the app shell as fallback now.
 - **A slow read was killed at 25s.** Edge functions must send a first byte within 25s; one Gemini read took longer in production and returned a 504. `/api/extract` runs on Node (`maxDuration: 60`, `export const POST`).

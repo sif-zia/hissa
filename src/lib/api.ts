@@ -14,6 +14,22 @@ export class ApiError extends Error {
   }
 }
 
+/** Where this device stands on bill photo reads. Mirrors api/_lib/usage.ts. */
+export interface Usage {
+  allowed: boolean;
+  remaining: number;
+  limit: number;
+  resetAt: number;
+  reason?: "device" | "network" | "global";
+}
+
+/** A read the server refused: a limit was reached. */
+export class LimitError extends ApiError {
+  constructor(message: string, readonly usage: Usage) {
+    super(message, 429);
+  }
+}
+
 /** Status of an ApiError that never reached the server. */
 export const OFFLINE = 0;
 
@@ -114,6 +130,8 @@ export interface Extracted {
   adjustments: { kind: Kind; pct: number; amount: number; step: number }[];
   /** Major units, 0 when no total was printed. */
   printedTotal: number;
+  /** After this read. Absent when the counter was unreachable. */
+  usage?: Usage | null;
   /** True when the extracted lines did not sum to the printed subtotal. */
   suspect?: boolean;
 }
@@ -124,5 +142,14 @@ export async function extract(base64: string): Promise<Extracted> {
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ image: base64 }),
   });
+  if (res.status === 429) {
+    const body = (await res.json().catch(() => ({}))) as { error?: string; usage?: Usage };
+    if (body.usage) throw new LimitError(body.error ?? "Daily limit reached.", body.usage);
+  }
   return (await jsonOrThrow(res)) as Extracted;
+}
+
+/** May this device have a photo read now? Advice: /api/extract decides. */
+export async function fetchUsage(): Promise<Usage> {
+  return (await jsonOrThrow(await call("/api/usage"))) as Usage;
 }
