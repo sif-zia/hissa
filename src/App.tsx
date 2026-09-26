@@ -74,8 +74,8 @@ export function App() {
 
   const sync = useBillSync(code);
   const online = useOnline();
-  /** "take a pic" was tapped with no network: say so on Home, offer typing. */
-  const [camOffline, setCamOffline] = useState(false);
+  /** Something that needs the network was tapped without one: say which. */
+  const [needsNet, setNeedsNet] = useState<"camera" | "join" | null>(null);
   const offline = (e: unknown) => e instanceof ApiError && e.status === OFFLINE;
 
   /* Pass the phone: one round at a time, saved on every tap. */
@@ -409,13 +409,18 @@ export function App() {
           onRename={() => setRenaming(true)}
           onCamera={() => {
             setErr("");
-            if (!online) { setCamOffline(true); return; }
-            setCamOffline(false);
+            if (!online) { setNeedsNet("camera"); return; }
+            setNeedsNet(null);
             setScreen("camera");
           }}
-          cameraOffline={camOffline && !online}
-          onManual={() => { setErr(""); setCamOffline(false); setBill(blank()); setScreen("editor"); }}
-          onJoin={() => { setErr(""); setScreen("join"); }}
+          needsNet={online ? null : needsNet}
+          onManual={() => { setErr(""); setNeedsNet(null); setBill(blank()); setScreen("editor"); }}
+          onJoin={() => {
+            setErr("");
+            if (!online) { setNeedsNet("join"); return; }
+            setNeedsNet(null);
+            setScreen("join");
+          }}
           onResume={(c) => navigate(`/s/${c}`)}
           round={round ? {
             label: `${round.meta.billName} · ${
