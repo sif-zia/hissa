@@ -64,6 +64,10 @@ These come from the spec's maths and data model and are the things most likely t
 
 **Codes** are 4 characters from an unambiguous alphabet (`ABCDEFGHJKLMNPQRSTUVWXYZ23456789` — no I, O, 0, 1).
 
+## Offline
+
+Everything but the server works offline: the precached app shell, manual entry, equal split, pass the phone, the share card and copy. Reading a photo and live link splits need the network. Say so *before* the attempt where the browser knows (`useOnline`: "take a pic" offers "enter it manually"; the chooser disables "share the link"), and name it honestly after a failed attempt where it didn't (`api.ts` turns a rejected `fetch` into `ApiError` with status `OFFLINE`, distinct from a server's own error). A failed read keeps the photo on the preview so it can be read once the connection is back. `/` is network-first with the app shell as its offline fallback.
+
 ## Extraction
 
 Gemini Flash on the AI Studio free tier while building; a paid key behind the Worker before any external user touches it (the free tier's training clause, not its rate limit, is the blocker). Non-negotiables: resize client-side to 1,400 px long side / JPEG 0.75 before upload, use `responseMimeType: "application/json"` with a `responseSchema` rather than parsing prose, set `thinkingConfig.thinkingBudget: 0`, validate line sums against the printed subtotal, always show the human review screen, and never retain the photo.
@@ -87,6 +91,8 @@ Each of these was a real bug found by running the app, not a hypothetical:
 - **Upstash batches** go to `/multi-exec`, not the base URL. Posting to the root fails with "unsupported arg type".
 - **`cleanUrls` 308s `/app.html` → `/app`**, so the rewrite target must be `/app` or the code in the URL is thrown away.
 - **The poll ran at ~2x.** Keying the timer effect on `state` tore it down on every arriving claim. It is keyed on the bill's open time now.
+- **A failed read left no message.** It set an error and moved to an empty editor that never rendered it. The editor shows it now, and an offline failure stays on the photo.
+- **`/` offline was the browser's error page**, because the landing is deliberately not precached. It is network-first with the app shell as fallback now.
 - **A slow read was killed at 25s.** Edge functions must send a first byte within 25s; one Gemini read took longer in production and returned a 504. `/api/extract` runs on Node (`maxDuration: 60`, `export const POST`).
 - **Node wants file extensions.** The Edge bundler resolved `./_lib/http`; Node's ESM loader does not, and every call failed with `ERR_MODULE_NOT_FOUND`. Relative imports under `api/` end in `.js`. Only visible on a deployment.
 - **Paper vanished over the camera in dark mode.** The viewfinder's strokes and stubs used the theme's "paper", which is dark brown in dark mode. `.cam` pins the light palette.

@@ -425,6 +425,8 @@ Driven through the **Claude-in-Chrome extension** in the user's Chrome, with no 
 
 - **2.1.1**: `/api/extract` moved from Edge to Node. Edge's 25s first-byte limit killed a slow Gemini read in production.
 
+- **2.2.0**: works offline apart from reading and live splits. It says so before "take a pic" or "share the link", names an offline failure honestly, keeps the photo when a read fails, and `/` falls back to the app.
+
 ## Still open
 
 - Real-device checks (the device matrix above): tap-to-focus and flash on Android, the iOS share sheet, installed PWA, VoiceOver/TalkBack.

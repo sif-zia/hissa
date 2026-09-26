@@ -52,6 +52,27 @@ export default defineConfig({
         // Workbox matches pathname + search, so "/?about" needs its own allowance
         // or the service worker answers the landing page with the app shell.
         navigateFallbackDenylist: [/^\/(\?.*)?$/, /^\/how-it-works/, /^\/api\//],
+        // The landing pages stay network-first, so online nothing changes and
+        // the SEO copy is always fresh. Offline they come from cache; "/" with
+        // nothing cached falls back to the app shell rather than the
+        // browser's "can't be reached" page, which is what a returning user
+        // opening the bare domain on a plane would otherwise get.
+        runtimeCaching: [
+          {
+            urlPattern: ({ request, url }) => request.mode === "navigate" && url.pathname === "/",
+            handler: "NetworkFirst",
+            options: {
+              cacheName: "landing",
+              networkTimeoutSeconds: 4,
+              precacheFallback: { fallbackURL: "app.html" },
+            },
+          },
+          {
+            urlPattern: ({ request, url }) => request.mode === "navigate" && url.pathname.startsWith("/how-it-works"),
+            handler: "NetworkFirst",
+            options: { cacheName: "landing", networkTimeoutSeconds: 4 },
+          },
+        ],
       },
     }),
   ],

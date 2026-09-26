@@ -21,7 +21,8 @@ import { draftFrom, rememberedSteps, rememberSteps } from "./lib/reading";
 import { identityOf, uid, dayMeal, type Identity } from "./lib/identity";
 import { toggleClaim, bumpClaim, type Claims } from "./lib/split";
 import type { Shot } from "./lib/image";
-import { createBill, extract, fetchBill, putClaims, setSplitUnclaimed, ApiError } from "./lib/api";
+import { createBill, extract, fetchBill, putClaims, setSplitUnclaimed, ApiError, OFFLINE } from "./lib/api";
+import { useOnline } from "./hooks/useOnline";
 import { loadMe, saveMe, forgetMe, sweep, loadName, saveName } from "./lib/cache";
 import { share, copy, buzz } from "./lib/share";
 import { useBillSync } from "./hooks/useBillSync";
@@ -72,6 +73,10 @@ export function App() {
   const [joinName, setJoinName] = useState<string | null>(null);
 
   const sync = useBillSync(code);
+  const online = useOnline();
+  /** "take a pic" was tapped with no network: say so on Home, offer typing. */
+  const [camOffline, setCamOffline] = useState(false);
+  const offline = (e: unknown) => e instanceof ApiError && e.status === OFFLINE;
 
   /* Pass the phone: one round at a time, saved on every tap. */
   const [round, setRound] = useState<Round | null>(loadRound);
@@ -140,7 +145,13 @@ export function App() {
       // The editor re-derives the fit live, so only the settled bill is kept.
       setBill(draftFrom(out, uid).bill);
       setScreen("editor");
-    } catch {
+    } catch (e) {
+      if (offline(e)) {
+        // Keep the photo: it can be read the moment the connection is back.
+        setErr("no internet → reading a photo needs a connection. try again when you're back, or type the lines in.");
+        setBusy(false);
+        return;
+      }
       // Never dead-end on a failed read: typing five lines beats a retake.
       setErr("Couldn't read that one. Type the lines in — it's quicker than another retake.");
       setSuspect(false);
@@ -178,7 +189,9 @@ export function App() {
       const how = await share(out.meta.code, out.meta.billName);
       flash(how === "copied" ? `invite copied · ${out.meta.code}` : `your code is ${out.meta.code}`);
     } catch (e) {
-      setErr(e instanceof ApiError ? e.message : "Couldn't open the split. Check your connection.");
+      setErr(offline(e)
+        ? "no internet → a shared link needs a connection. pass the phone works without one."
+        : e instanceof ApiError ? e.message : "Couldn't open the split. Check your connection.");
     }
     setBusy(false);
   };
@@ -207,7 +220,9 @@ export function App() {
       setScreen("home");
       navigate(`/s/${c}`);
     } catch (e) {
-      setErr(e instanceof ApiError ? e.message : `No split found with code ${c}.`);
+      setErr(offline(e)
+        ? "no internet → joining a split needs a connection. open the link again when you're back."
+        : e instanceof ApiError ? e.message : `No split found with code ${c}.`);
       // An auto-join that failed lands on the form, so the code can be fixed.
       setJoinCode(c);
       setScreen("join");
@@ -392,8 +407,14 @@ export function App() {
         <Home
           name={myName}
           onRename={() => setRenaming(true)}
-          onCamera={() => { setErr(""); setScreen("camera"); }}
-          onManual={() => { setErr(""); setBill(blank()); setScreen("editor"); }}
+          onCamera={() => {
+            setErr("");
+            if (!online) { setCamOffline(true); return; }
+            setCamOffline(false);
+            setScreen("camera");
+          }}
+          cameraOffline={camOffline && !online}
+          onManual={() => { setErr(""); setCamOffline(false); setBill(blank()); setScreen("editor"); }}
           onJoin={() => { setErr(""); setScreen("join"); }}
           onResume={(c) => navigate(`/s/${c}`)}
           round={round ? {
@@ -420,6 +441,7 @@ export function App() {
           reading={busy}
           onNext={readShot}
           onRetake={() => { setShot(null); setErr(""); setScreen("camera"); }}
+          onManual={() => { setShot(null); setErr(""); setBill(blank()); setScreen("editor"); }}
           error={err}
         />
       )}
@@ -429,6 +451,7 @@ export function App() {
           bill={bill}
           setBill={setBill}
           suspect={suspect}
+          error={err}
           onEqual={() => { rememberSteps(compute(bill).steps); setScreen("equal"); }}
           onStart={() => {
             rememberSteps(compute(bill).steps);
@@ -456,6 +479,7 @@ export function App() {
           billName={billName} setBillName={setBillName}
           fallback={place || dayMeal()}
           onLink={openSplit}
+          online={online}
           onPhone={() => { setErr(""); setSeatNames([myName]); setReseat(false); setScreen("table"); }}
           onBack={() => setScreen("editor")}
           busy={busy} error={err}

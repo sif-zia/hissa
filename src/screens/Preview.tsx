@@ -7,8 +7,9 @@ import { tiltStyle } from "../lib/tilt";
  * Spec §2.3.
  */
 export function Preview({
-  shot, reading, onNext, onRetake, error,
+  shot, reading, onNext, onRetake, onManual, error,
 }: {
+  onManual: () => void;
   shot: Shot;
   reading: boolean;
   onNext: () => void;
@@ -35,9 +36,15 @@ export function Preview({
         <button class="btn" style={tiltStyle("go-next", "card")} onClick={onNext} disabled={reading}>
           {reading ? "reading it…" : "read it"}
         </button>
-        <button class="btn btn-alt" onClick={onRetake} disabled={reading}>
-          retake
-        </button>
+        {error ? (
+          <button class="btn btn-alt" onClick={onManual} disabled={reading}>
+            enter it manually
+          </button>
+        ) : (
+          <button class="btn btn-alt" onClick={onRetake} disabled={reading}>
+            retake
+          </button>
+        )}
       </div>
     </Sheet>
   );

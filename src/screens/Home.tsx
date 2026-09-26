@@ -4,8 +4,10 @@ import { recentCodes } from "../lib/cache";
 
 /** Three equally weighted ways in, no hierarchy games. Spec §2.1. */
 export function Home({
-  name, onRename, onCamera, onManual, onJoin, onResume, round,
+  name, onRename, onCamera, onManual, onJoin, onResume, round, cameraOffline,
 }: {
+  /** "take a pic" was tapped offline. */
+  cameraOffline: boolean;
   /** An unfinished pass-the-phone round on this device. */
   round: { label: string; open: () => void } | null;
   name: string;
@@ -34,6 +36,14 @@ export function Home({
           <b>take a pic</b>
           <span class="dim small">snap the receipt, the lines fill themselves in</span>
         </button>
+        {cameraOffline ? (
+          <div class="sticky" role="alert" style={{ "--tilt": "-1.1deg" }}>
+            <p class="scrawl" style={{ margin: 0, color: "var(--warn)" }}>
+              no internet → reading a photo needs a connection. everything else works offline.
+            </p>
+            <button class="btn" style={{ marginTop: 12 }} onClick={onManual}>enter it manually</button>
+          </div>
+        ) : null}
         <button class="choice" style={tiltStyle("home-man", "card")} onClick={onManual}>
           <b>enter manually</b>
           <span class="dim small">type the items yourself</span>
