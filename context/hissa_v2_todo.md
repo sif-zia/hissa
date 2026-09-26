@@ -371,8 +371,8 @@ Driven through the **Claude-in-Chrome extension** in the user's Chrome, with no 
   - [x] `/s/CODE` rewrite
   - [x] `/app.html` → `/app` 308
   - [x] `/` redirect with a name
-  - [ ] `/?about`
-  - [ ] `/how-it-works`
+  - [x] `/?about`
+  - [x] `/how-it-works`
   - [x] `noindex` still on the app, and canonical and OG still correct on `/`
 - [x] Re-run the Name, Link split and Detection flows (Phase 8) against the preview URL through the Chrome extension. _no extension flakiness: name, then auto-join into an existing split from a real deep link; bill 7 uploaded through the real UI and settled at 3,213.13 ✓_
 - [x] Real extraction on the preview: run the full receipt set. Record per receipt the items, the subtotal flag, the detected arrangement, `✓ bill` yes/no, and `place`. _all 10 run on `vercel dev` with the same model and key; bills 3 and 7 re-run on the preview_
