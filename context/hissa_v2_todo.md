@@ -343,28 +343,28 @@ Driven through the **Claude-in-Chrome extension** in the user's Chrome, with no 
 
 ## Phase 9 — Docs
 
-- [ ] `CLAUDE.md`:
-  - [ ] Rewrite "Order of operations at bill level" as the steps rule, with the default arrangement.
-  - [ ] Screens: name → home → capture → preview → editor → (equal | chooser → link split | table → turns → tally), plus join.
-  - [ ] Update the test count.
-  - [ ] Add to "Things that bit": the `sweep()` vs un-`at`ed keys issue, and pre-rendering the PNG for iOS share, if either actually bit.
-  - [ ] Add the new localStorage keys under the invariants.
-  - [ ] Update the budget line with measured numbers.
-- [ ] `README.md`: screens, budgets table, and `GEMINI_MODEL` unchanged.
-- [ ] `context/hissa_spec.md`: a one-line pointer at §3.1 to `hissa_v2_plan.md` §3 (don't rewrite the spec).
-- [ ] `index.html` / `how-it-works.html` copy: mention pass the phone and sharing in "how it goes", and update the JSON-LD `featureList`. The landing page stays zero-JS apart from the inline head script.
+- [x] `CLAUDE.md`:
+  - [x] Rewrite "Order of operations at bill level" as the steps rule, with the default arrangement.
+  - [x] Screens: name → home → capture → preview → editor → (equal | chooser → link split | table → turns → tally), plus join.
+  - [x] Update the test count.
+  - [x] Add to "Things that bit": the `sweep()` vs un-`at`ed keys issue, and pre-rendering the PNG for iOS share, if either actually bit. _neither of those bit. Added the three that did: negative discounts, the self-contradicting picker, and the `/?about` denylist_
+  - [x] Add the new localStorage keys under the invariants.
+  - [x] Update the budget line with measured numbers.
+- [x] `README.md`: screens, budgets table, and `GEMINI_MODEL` unchanged.
+- [x] `context/hissa_spec.md`: a one-line pointer at §3.1 to `hissa_v2_plan.md` §3 (don't rewrite the spec).
+- [x] `index.html` / `how-it-works.html` copy: mention pass the phone and sharing in "how it goes", and update the JSON-LD `featureList`. The landing page stays zero-JS apart from the inline head script. _index.html only; how-it-works covers the maths and privacy, which v2 doesn't change_
 - [ ] Commit: "Document v2".
 
 ---
 
 ## Phase 10 — Preview deployment and verification
 
-- [ ] `pnpm build` passes, and `tsc -b` is clean.
-- [ ] Budget check against the Phase 0 baseline:
-  - [ ] app JS ≤ 25 KB gz (estimate 23–25)
-  - [ ] landing critical path unchanged apart from one inline line
-  - [ ] fonts ≤ 64 KB
-  - [ ] **no new runtime dependencies** in `package.json`
+- [x] `pnpm build` passes, and `tsc -b` is clean.
+- [x] Budget check against the Phase 0 baseline:
+  - [ ] app JS ≤ 25 KB gz (estimate 23–25) _**25.84 KB gz, 0.84 over this target** (60 KB ceiling). Left as is rather than trimmed to fit a self-set estimate_
+  - [x] landing critical path unchanged apart from one inline line _index.html 3.01 → 3.15 KB gz (the redirect line plus new copy); CSS is app-only_
+  - [x] fonts ≤ 64 KB
+  - [x] **no new runtime dependencies** in `package.json`
 - [ ] `vercel` (preview) from the `v2` branch, and note the URL.
 - [ ] If Deployment Protection blocks automation, use a bypass token for the smoke run rather than turning protection off.
 - [ ] **Routing, verified on the deployment and not on `vercel dev`** (CLAUDE.md):
