@@ -1,0 +1,4 @@
+# Never uploaded with a CLI deploy: bill photos, local secrets, editor swap files.
+test_bills/
+.env*.local
+*.swp
