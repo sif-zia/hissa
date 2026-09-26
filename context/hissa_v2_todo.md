@@ -427,6 +427,8 @@ Driven through the **Claude-in-Chrome extension** in the user's Chrome, with no 
 
 - **2.2.0**: works offline apart from reading and live splits. It says so before "take a pic" or "share the link", names an offline failure honestly, keeps the photo when a read fails, and `/` falls back to the app.
 
+- **2.3.0**: five bill photos a day per device, enforced by the server, with a per-network and a global backstop. `/api/usage` lets "take a pic" say so before the camera opens.
+
 ## Still open
 
 - Real-device checks (the device matrix above): tap-to-focus and flash on Android, the iOS share sheet, installed PWA, VoiceOver/TalkBack.

@@ -4,10 +4,14 @@ import { recentCodes } from "../lib/cache";
 
 /** Three equally weighted ways in, no hierarchy games. Spec §2.1. */
 export function Home({
-  name, onRename, onCamera, onManual, onJoin, onResume, round, needsNet,
+  name, onRename, onCamera, onManual, onJoin, onResume, round, notice, noticeUnder, checking,
 }: {
-  /** A choice that needs the network was tapped offline, and which. */
-  needsNet: "camera" | "join" | null;
+  /** Why a tapped choice can't go ahead (offline, or photos used up), or "". */
+  notice: string;
+  /** Which choice it belongs under. */
+  noticeUnder: "camera" | "join";
+  /** Checking with the server before the camera opens. */
+  checking: boolean;
   /** An unfinished pass-the-phone round on this device. */
   round: { label: string; open: () => void } | null;
   name: string;
@@ -32,11 +36,13 @@ export function Home({
       </p>
 
       <div class="stack">
-        <button class="choice" style={tiltStyle("home-cam", "card")} onClick={onCamera}>
+        <button class="choice" style={tiltStyle("home-cam", "card")} onClick={onCamera} disabled={checking} aria-busy={checking}>
           <b>take a pic</b>
-          <span class="dim small">snap the receipt, the lines fill themselves in</span>
+          <span class="dim small">
+            {checking ? "checking how many photos you have left today…" : "snap the receipt, the lines fill themselves in"}
+          </span>
         </button>
-        {needsNet === "camera" ? <Offline what="reading a photo" onManual={onManual} /> : null}
+        {notice && noticeUnder === "camera" ? <Notice text={notice} onManual={onManual} /> : null}
         <button class="choice" style={tiltStyle("home-man", "card")} onClick={onManual}>
           <b>enter manually</b>
           <span class="dim small">type the items yourself</span>
@@ -45,7 +51,7 @@ export function Home({
           <b>join a split</b>
           <span class="dim small">someone sent you a code</span>
         </button>
-        {needsNet === "join" ? <Offline what="joining a split" onManual={onManual} /> : null}
+        {notice && noticeUnder === "join" ? <Notice text={notice} onManual={onManual} /> : null}
       </div>
 
       {recent.length || round ? (
@@ -85,14 +91,13 @@ export function Home({
 
 /**
  * Said under the choice that was tapped, before anything is attempted. Manual
- * entry and pass the phone need no network, so that is the way out.
+ * entry and pass the phone need neither the network nor a photo read, so that
+ * is always the way out.
  */
-function Offline({ what, onManual }: { what: string; onManual: () => void }) {
+function Notice({ text, onManual }: { text: string; onManual: () => void }) {
   return (
     <div class="sticky" role="alert" style={{ "--tilt": "-1.1deg" }}>
-      <p class="scrawl" style={{ margin: 0, color: "var(--warn)" }}>
-        no internet → {what} needs a connection. entering a bill and passing the phone work offline.
-      </p>
+      <p class="scrawl" style={{ margin: 0, color: "var(--warn)" }}>{text}</p>
       <button class="btn" style={{ marginTop: 12 }} onClick={onManual}>enter it manually</button>
     </div>
   );

@@ -6,7 +6,7 @@
  */
 
 import { handler, readJson, json, HttpError } from "./_lib/http.js";
-import { cmd } from "./_lib/redis.js";
+import { deviceOf, ipOf, take, give, type Usage } from "./_lib/usage.js";
 import { shapeReading, KINDS, type Raw } from "./_lib/reading.js";
 
 /*
@@ -88,18 +88,12 @@ const SCHEMA = {
   required: ["currency", "items", "adjustments", "printedSubtotal", "printedTotal", "place"],
 };
 
-/** Cheap per-IP throttle. Best-effort: a Redis outage must not block reading. */
-async function throttle(req: Request): Promise<void> {
-  const ip = req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || "anon";
-  try {
-    const n = await cmd<number>("INCR", `rl:extract:${ip}`);
-    if (n === 1) await cmd("EXPIRE", `rl:extract:${ip}`, 3600);
-    if (n > 40) throw new HttpError("That is a lot of bills in an hour. Try again later.", 429);
-  } catch (e) {
-    if (e instanceof HttpError) throw e;
-  }
-}
-
+/** What a refused read says, by which limit refused it. */
+const REFUSED: Record<NonNullable<Usage["reason"]>, string> = {
+  device: "You've reached today's limit of bill photos.",
+  network: "Too many bill photos have been read from this network today.",
+  global: "Hissa has read as many bills as it can today.",
+};
 
 export const POST = handler(async (req) => {
   if (req.method !== "POST") throw new HttpError("Method not allowed.", 405);
@@ -112,7 +106,25 @@ export const POST = handler(async (req) => {
   // base64 is 4 chars per 3 bytes.
   if (image.length * 0.75 > MAX_BYTES) throw new HttpError("That photo is too large.", 413);
 
-  await throttle(req);
+  // The hard limit. Spent before Gemini is called, handed back if Gemini
+  // fails. A Redis outage lets the read through: counting is best-effort,
+  // reading bills is the product.
+  const { id, setCookie } = deviceOf(req);
+  const ip = ipOf(req);
+  let usage: Usage | null = null;
+  try {
+    usage = await take(id, ip);
+  } catch {
+    usage = null;
+  }
+  const withCookie = (init: ResponseInit = {}): ResponseInit =>
+    setCookie ? { ...init, headers: { ...init.headers, "Set-Cookie": setCookie } } : init;
+  if (usage && !usage.allowed) {
+    return json({ error: REFUSED[usage.reason ?? "device"], usage }, withCookie({ status: 429 }));
+  }
+  const refund = async () => {
+    if (usage) await give(id, ip).catch(() => undefined);
+  };
 
   const call = (withThinkingBudget: boolean) =>
     fetch(`${endpointFor(MODEL)}?key=${key}`, {
@@ -136,13 +148,20 @@ export const POST = handler(async (req) => {
       }),
     });
 
-  let res = await call(true);
-  // Newer models reject thinkingBudget outright rather than ignoring it. Retry
-  // once without it so swapping GEMINI_MODEL forward never needs a code change.
-  if (res.status === 400) res = await call(false);
+  let res: Response;
+  try {
+    res = await call(true);
+    // Newer models reject thinkingBudget outright rather than ignoring it. Retry
+    // once without it so swapping GEMINI_MODEL forward never needs a code change.
+    if (res.status === 400) res = await call(false);
+  } catch {
+    await refund();
+    throw new HttpError("Could not read that bill.", 502);
+  }
 
   if (!res.ok) {
     console.error("gemini", MODEL, res.status, (await res.text()).slice(0, 300));
+    await refund();
     throw new HttpError("Could not read that bill.", 502);
   }
 
@@ -155,8 +174,9 @@ export const POST = handler(async (req) => {
   try {
     out = JSON.parse(text) as Raw;
   } catch {
+    await refund();
     throw new HttpError("Could not read that bill.", 502);
   }
 
-  return json(shapeReading(out));
+  return json({ ...shapeReading(out), usage }, withCookie());
 });
