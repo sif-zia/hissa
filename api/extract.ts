@@ -40,7 +40,7 @@ const PROMPT = `You are reading a photo of a restaurant or shop bill.
 - "step" says what the adjustment was calculated on: 1 if on the items subtotal; 2 if on the subtotal after the step-1 adjustments were applied; 3 if after step 2; and so on. Adjustments calculated on the same amount share a step.
 - "printedSubtotal" is the subtotal as printed, or 0 if it is not shown.
 - "printedTotal" is the final amount payable as printed, or 0 if it is not shown.
-- "place" is the restaurant or shop name from the top of the bill, or "" if none is printed.
+- "place" is the restaurant or shop name from the top of the bill, or "" if no name is visible. An address, phone number or tax number is not a name.
 - "currency" is a short symbol such as Rs, $, PKR, AED.
 - Numbers are plain numbers: no commas, no currency symbols.`;
 

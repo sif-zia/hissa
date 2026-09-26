@@ -5,7 +5,10 @@
  */
 
 import type { Extracted } from "./api";
-import { cents, detect, noAdj, KINDS, DEFAULT_STEPS, type DraftBill, type Kind, type Steps } from "./money";
+import {
+  cents, compute, detect, noAdj, KINDS, DEFAULT_STEPS, MATCH_SLACK,
+  type DraftBill, type Kind, type Steps,
+} from "./money";
 import { loadPref, savePref } from "./cache";
 
 export type Fit = "match" | "none" | "unknown";
@@ -48,7 +51,30 @@ export function draftFrom(out: Extracted, id: () => string): { bill: DraftBill; 
     printedTotal: out.printedTotal ? cents(out.printedTotal) : undefined,
   };
   const { steps, fit } = detect(bill, said);
+  if (fit !== "none") return { bill: { ...bill, steps }, fit };
+
+  // No stacking of the printed rates reaches the printed total. Bills round
+  // and exempt things their rates don't show (15% of 2,795 printed as 418),
+  // so try what was actually charged: the printed amounts, GST as the rate
+  // those amounts imply on the subtotal.
+  const asCharged = byAmount(bill, out, subtotal);
+  if (asCharged) return { bill: asCharged, fit: "match" };
   return { bill: { ...bill, steps }, fit };
+}
+
+function byAmount(bill: DraftBill, out: Extracted, subtotal: number): DraftBill | null {
+  const adjs = out.adjustments ?? [];
+  if (!adjs.length || !subtotal || adjs.some((a) => !a.amount)) return null;
+  const adj = noAdj();
+  for (const a of adjs) {
+    adj[a.kind] = a.kind === "gst"
+      ? { mode: "pct", val: String(Math.round((a.amount / subtotal) * 10000) / 100) }
+      : { mode: "flat", val: String(a.amount) };
+  }
+  // One step: every flat amount ignores its base, and GST is on the subtotal.
+  const alt: DraftBill = { ...bill, adj, steps: [adjs.map((a) => a.kind)] };
+  const { total } = compute(alt);
+  return bill.printedTotal && Math.abs(total - bill.printedTotal) <= MATCH_SLACK ? alt : null;
 }
 
 /** The stacking of the last bill that was split, for the next manual one. */

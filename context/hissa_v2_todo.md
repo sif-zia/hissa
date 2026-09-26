@@ -23,16 +23,16 @@ The execution list for `hissa_v2_plan.md`. Section numbers (§) refer to that pl
 - [ ] Vercel: `vercel env ls` shows `GEMINI_API_KEY` and the Upstash URL/token (`UPSTASH_REDIS_REST_*` or `KV_REST_API_*`; `api/_lib/redis.ts` accepts either) for **Preview** as well as Production. Add any that are missing, or preview deploys can't be tested end to end. _GEMINI_API_KEY is Production-only; Upstash vars cover all envs. Add Gemini to Preview in Phase 10_
 - [x] Font glyph check (§11). Confirm `½ ⅓ ¼ ⅔ ¾ ✓ ● ⚡` exist in `public/fonts/hissa-ledger*.woff2` and `hissa-scrawl.woff2`. _fonts.sh subsets include ✓ → — × but not ½ ⅓ ¼ ● ·. No rebuild: shares write 1/2, and the image draws dots and ticks as shapes_
   - [x] If they're missing, either add them via `tools/fonts.sh`, keeping the fonts total ≤ 64 KB (it's already over the 45 KB target; don't grow it), or plan to fall back to `1/2` and canvas paths. Record which.
-- [ ] Receipt set for extraction checks: 8–10 real bill photos in a **gitignored** folder (`tools/receipts/`, added to `.gitignore`; photos are never committed). For each, note the printed subtotal, total and the true arrangement. Cover at least:
-  - [ ] GST only
-  - [ ] GST + service charge
-  - [ ] discount before tax
-  - [ ] discount after tax
-  - [ ] a flat discount
-  - [ ] a printed tip
-  - [ ] no tax at all
-  - [ ] a long bill (20+ lines)
-  - [ ] a crumpled or low-light photo
+- [x] Receipt set for extraction checks: 8–10 real bill photos in a **gitignored** folder (`tools/receipts/`, added to `.gitignore`; photos are never committed). For each, note the printed subtotal, total and the true arrangement. Cover at least: _your 10 photos in `test_bills/` (now gitignored), plus 6 synthetic receipts. Their real Gemini answers are fixtures in `tests/real-bills.test.ts` and `tests/receipts.test.ts`_
+  - [x] GST only
+  - [x] GST + service charge
+  - [x] discount before tax
+  - [x] discount after tax
+  - [x] a flat discount
+  - [x] a printed tip
+  - [x] no tax at all
+  - [ ] a long bill (20+ lines) _not covered; the longest is 9 lines (Urban Tarka)_
+  - [x] a crumpled or low-light photo _Freddy's (crumpled) and Saltanat (held in hand at night)_
 - [x] Decide how production deploys happen (git integration vs `vercel --prod`) by checking the project's Git settings in the dashboard. Record it here: `vercel --prod` (CLI). _every deploy so far is CLI `vercel --prod`, with no git integration_
 
 ---

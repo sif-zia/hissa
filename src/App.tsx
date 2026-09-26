@@ -359,7 +359,10 @@ export function App() {
     );
   }
 
-  if (code && me && !sync.state) {
+  // Joining from a link with a stored name: no form to show, just the wait.
+  const autoJoining = Boolean(code && !me && busy && autoJoined.current === code);
+
+  if ((code && me && !sync.state) || autoJoining) {
     return (
       <div class="paper">
         <div class="sheet">
