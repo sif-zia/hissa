@@ -260,27 +260,27 @@ The execution list for `hissa_v2_plan.md`. Section numbers (§) refer to that pl
 ## Phase 7 — Full-screen camera (§7a)
 
 ### Code
-- [ ] `useCamera`:
-  - [ ] after play, read `track.getCapabilities?.()` on `loadedmetadata` and again ~500ms later
-  - [ ] expose `caps: { focus: boolean; torch: boolean }`
-  - [ ] `focusAt(x, y)`: `single-shot` + `pointsOfInterest`, back to `continuous` after 3s, each wrapped in try/catch
-  - [ ] `setTorch(on)`
-  - [ ] `stop()` still runs on every exit path
-- [ ] `src/lib/image.ts` (or a new helper): `frameCoords(tap, rect, videoW, videoH)` mapping a tap through the `object-fit: cover` crop to 0–1 frame coordinates.
-- [ ] `Capture.tsx` live state:
-  - [ ] a `.cam` fixed layer with safe-area padding and body scroll locked
-  - [ ] top: `✕` stub (back) and a flash stub **only if** `caps.torch` (`aria-pressed`)
-  - [ ] SVG pencil corner marks
-  - [ ] a taped scrawl note that fades after ~1.5s
-  - [ ] a focus ring at the tap point on every tap on the video; `focusAt` only if `caps.focus`
-  - [ ] bottom: `upload` stub (the existing file input) and the paper shutter
-  - [ ] errors as a sticky over the video
-  - [ ] hide the theme toggle and page head on this screen
-- [ ] Blocked states (denied, unavailable) keep the current sheet layout.
-- [ ] `journal.css`: `.cam`, corner marks, focus ring, and the note fade, all from existing tokens. Under `prefers-reduced-motion`: no fade and no ring animation.
+- [x] `useCamera`:
+  - [x] after play, read `track.getCapabilities?.()` on `loadedmetadata` and again ~500ms later
+  - [x] expose `caps: { focus: boolean; torch: boolean }`
+  - [x] `focusAt(x, y)`: `single-shot` + `pointsOfInterest`, back to `continuous` after 3s, each wrapped in try/catch
+  - [x] `setTorch(on)`
+  - [x] `stop()` still runs on every exit path
+- [x] `src/lib/image.ts` (or a new helper): `frameCoords(tap, rect, videoW, videoH)` mapping a tap through the `object-fit: cover` crop to 0–1 frame coordinates.
+- [x] `Capture.tsx` live state:
+  - [x] a `.cam` fixed layer with safe-area padding and body scroll locked
+  - [x] top: `✕` stub (back) and a flash stub **only if** `caps.torch` (`aria-pressed`)
+  - [x] SVG pencil corner marks
+  - [x] a taped scrawl note that fades after ~1.5s
+  - [x] a focus ring at the tap point on every tap on the video; `focusAt` only if `caps.focus`
+  - [x] bottom: `upload` stub (the existing file input) and the paper shutter
+  - [x] errors as a sticky over the video
+  - [x] hide the theme toggle and page head on this screen
+- [x] Blocked states (denied, unavailable) keep the current sheet layout.
+- [x] `journal.css`: `.cam`, corner marks, focus ring, and the note fade, all from existing tokens. Under `prefers-reduced-motion`: no fade and no ring animation.
 
 ### Unit tests
-- [ ] `frameCoords`: a portrait element over a landscape frame, a landscape element over a portrait frame, a tap at the centre → (0.5, 0.5), taps at the corners stay within 0–1.
+- [x] `frameCoords`: a portrait element over a landscape frame, a landscape element over a portrait frame, a tap at the centre → (0.5, 0.5), taps at the corners stay within 0–1.
 
 ### Manual check
 - [ ] Android Chrome: flash toggles the torch, and tap-to-focus visibly refocuses on a near object.

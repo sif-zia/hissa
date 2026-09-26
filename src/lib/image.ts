@@ -55,3 +55,24 @@ export function shrink(file: File): Promise<Shot> {
     img.src = url;
   });
 }
+
+/**
+ * Where a tap on a `object-fit: cover` video lands in the camera frame, as
+ * 0-1 coordinates (what `pointsOfInterest` takes). Cover crops the frame to
+ * fill the element, so the element's edges are not the frame's.
+ */
+export function frameCoords(
+  tap: { x: number; y: number },
+  rect: { left: number; top: number; width: number; height: number },
+  videoW: number,
+  videoH: number,
+): { x: number; y: number } {
+  const scale = Math.max(rect.width / videoW, rect.height / videoH);
+  const dw = videoW * scale;
+  const dh = videoH * scale;
+  const clamp = (v: number) => Math.min(1, Math.max(0, v));
+  return {
+    x: clamp((tap.x - rect.left - (rect.width - dw) / 2) / dw),
+    y: clamp((tap.y - rect.top - (rect.height - dh) / 2) / dh),
+  };
+}
