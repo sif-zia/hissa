@@ -2,33 +2,38 @@ import { useCallback, useEffect, useRef, useState } from "preact/hooks";
 import { useLocation, useRoute } from "wouter-preact";
 
 import { Home } from "./screens/Home";
+import { Name } from "./screens/Name";
 import { Capture } from "./screens/Capture";
 import { Preview } from "./screens/Preview";
 import { Editor } from "./screens/Editor";
 import { EqualSplit } from "./screens/EqualSplit";
-import { Start } from "./screens/Start";
+import { Chooser } from "./screens/Chooser";
 import { Join } from "./screens/Join";
+import { Table } from "./screens/Table";
+import { Turn } from "./screens/Turn";
+import { Tally } from "./screens/Tally";
+import { loadRound, saveRound, seat, type Round } from "./lib/round";
 import { Split } from "./screens/Split";
 import { Toast } from "./ui";
 
-import { compute, type DraftBill } from "./lib/money";
-import { identityOf, uid, type Identity } from "./lib/identity";
-import type { Claims } from "./lib/split";
+import { compute, noAdj, num, type DraftBill } from "./lib/money";
+import { draftFrom, rememberedSteps, rememberSteps } from "./lib/reading";
+import { identityOf, uid, dayMeal, type Identity } from "./lib/identity";
+import { toggleClaim, bumpClaim, type Claims } from "./lib/split";
 import type { Shot } from "./lib/image";
 import { createBill, extract, fetchBill, putClaims, setSplitUnclaimed, ApiError } from "./lib/api";
-import { loadMe, saveMe, forgetMe, sweep } from "./lib/cache";
+import { loadMe, saveMe, forgetMe, sweep, loadName, saveName } from "./lib/cache";
 import { share, copy, buzz } from "./lib/share";
 import { useBillSync } from "./hooks/useBillSync";
 
-type Screen = "home" | "camera" | "preview" | "editor" | "equal" | "start" | "join";
+type Screen = "home" | "camera" | "preview" | "editor" | "equal" | "choose" | "join" | "table" | "turn" | "tally";
 
 const blank = (): DraftBill => ({
   currency: "Rs",
   priceMode: "total",
   items: [{ id: uid(), name: "", qty: "1", price: "" }],
-  gst: "",
-  discount: { mode: "flat", val: "" },
-  tip: { mode: "flat", val: "" },
+  adj: noAdj(),
+  steps: rememberedSteps(),
 });
 
 export function App() {
@@ -40,6 +45,7 @@ export function App() {
   const [bill, setBill] = useState<DraftBill | null>(null);
   const [shot, setShot] = useState<Shot | null>(null);
   const [suspect, setSuspect] = useState(false);
+  const [place, setPlace] = useState("");
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState("");
   const [toast, setToast] = useState("");
@@ -48,12 +54,21 @@ export function App() {
   const [me, setMe] = useState<Identity | null>(null);
   const [mine, setMine] = useState<Claims>({});
 
-  const [hostName, setHostName] = useState("");
+  const [myName, setMyName] = useState(loadName);
+  const [renaming, setRenaming] = useState(false);
   const [billName, setBillName] = useState("");
   const [joinCode, setJoinCode] = useState("");
-  const [joinName, setJoinName] = useState("");
+  /** Set only while switching identity on one split; null means "use myName". */
+  const [joinName, setJoinName] = useState<string | null>(null);
 
   const sync = useBillSync(code);
+
+  /* Pass the phone: one round at a time, saved on every tap. */
+  const [round, setRound] = useState<Round | null>(loadRound);
+  const [seatNames, setSeatNames] = useState<string[]>([]);
+  /** Back at the table from turn 1 of a round already under way. */
+  const [reseat, setReseat] = useState(false);
+  useEffect(() => { if (round) saveRound(round); }, [round]);
 
   useEffect(() => { sweep(); }, []);
 
@@ -64,6 +79,8 @@ export function App() {
 
   /* --- landing on /s/CODE: remember who I am, or ask --------------------- */
 
+  // A stored name means a shared link joins straight in: no form, no typing.
+  const autoJoined = useRef<string | null>(null);
   useEffect(() => {
     if (!code) {
       setMe(null);
@@ -73,11 +90,16 @@ export function App() {
     const known = loadMe(code);
     if (known) {
       setMe(known);
+    } else if (myName && autoJoined.current !== code) {
+      autoJoined.current = code;
+      void doJoin(code, myName);
     } else {
       setJoinCode(code);
       setScreen("join");
     }
-  }, [code]);
+    // doJoin is recreated every render; the code and name are what matter.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [code, myName]);
 
   /*
    * Two ways in, one owner of `mine`.
@@ -104,20 +126,9 @@ export function App() {
     try {
       const out = await extract(shot.base64);
       setSuspect(Boolean(out.suspect));
-      const items = out.items.map((i) => ({
-        id: uid(),
-        name: i.name,
-        qty: String(i.qty || 1),
-        price: String(i.price || 0),
-      }));
-      setBill({
-        currency: out.currency || "Rs",
-        priceMode: "total",
-        items: items.length ? items : blank().items,
-        gst: out.gstPct ? String(out.gstPct) : "",
-        discount: { mode: "flat", val: out.discount ? String(out.discount) : "" },
-        tip: { mode: "flat", val: out.tip ? String(out.tip) : "" },
-      });
+      setPlace(out.place ?? "");
+      // The editor re-derives the fit live, so only the settled bill is kept.
+      setBill(draftFrom(out, uid).bill);
       setScreen("editor");
     } catch {
       // Never dead-end on a failed read: typing five lines beats a retake.
@@ -131,19 +142,19 @@ export function App() {
 
   const openSplit = async () => {
     if (!bill) return;
-    const who = identityOf(hostName);
-    if (!who.name) { setErr("Put your name in first."); return; }
+    const who = identityOf(myName);
     setBusy(true);
     setErr("");
     try {
       const t = compute(bill);
       const out = await createBill({
-        billName,
+        billName: billName.trim() || place || dayMeal(),
         currency: bill.currency,
         lines: t.lines,
         subtotal: t.subtotal,
-        gstPct: Number(bill.gst) || 0,
+        gstPct: num(bill.adj.gst.val),
         gstAmt: t.gstAmt,
+        serviceAmt: t.serviceAmt,
         discountAmt: t.discountAmt,
         tipAmt: t.tipAmt,
         total: t.total,
@@ -162,9 +173,9 @@ export function App() {
     setBusy(false);
   };
 
-  const doJoin = async () => {
-    const c = joinCode.trim().toUpperCase().replace(/[^A-Z0-9]/g, "");
-    const who = identityOf(joinName);
+  const doJoin = async (rawCode: string, rawName: string) => {
+    const c = rawCode.trim().toUpperCase().replace(/[^A-Z0-9]/g, "");
+    const who = identityOf(rawName);
     if (!c || !who.name) { setErr("Both the code and your name are needed."); return; }
     setBusy(true);
     setErr("");
@@ -182,10 +193,14 @@ export function App() {
       adopted.current = who.key; // this fetch is fresher than any pending poll
       setMe(who);
       setMine(existing?.claims ?? {});
+      setJoinName(null);
       setScreen("home");
       navigate(`/s/${c}`);
     } catch (e) {
       setErr(e instanceof ApiError ? e.message : `No split found with code ${c}.`);
+      // An auto-join that failed lands on the form, so the code can be fixed.
+      setJoinCode(c);
+      setScreen("join");
     }
     setBusy(false);
   };
@@ -218,19 +233,14 @@ export function App() {
   );
 
   const tap = (lineId: string) => {
-    const next = { ...mine };
-    if (next[lineId]) delete next[lineId];
-    else next[lineId] = 1;
+    const next = toggleClaim(mine, lineId);
     buzz();
     setMine(next);
     void pushClaims(next);
   };
 
   const bump = (lineId: string, delta: number) => {
-    const next = { ...mine };
-    const v = (next[lineId] ?? 0) + delta;
-    if (v <= 0) delete next[lineId];
-    else next[lineId] = Math.min(v, 20);
+    const next = bumpClaim(mine, lineId, delta);
     buzz();
     setMine(next);
     void pushClaims(next);
@@ -248,9 +258,52 @@ export function App() {
     }
   };
 
+  /* --- pass the phone ---------------------------------------------------- */
+
+  const startRound = (names: string[]) => {
+    if (reseat && round) {
+      setRound({ ...round, people: seat(names, round.people), turn: 0, redo: false });
+    } else if (bill) {
+      const t = compute(bill);
+      setRound({
+        meta: {
+          code: "",
+          billName: billName.trim() || place || dayMeal(),
+          currency: bill.currency,
+          lines: t.lines,
+          subtotal: t.subtotal,
+          gstPct: num(bill.adj.gst.val),
+          gstAmt: t.gstAmt,
+          serviceAmt: t.serviceAmt,
+          discountAmt: t.discountAmt,
+          tipAmt: t.tipAmt,
+          total: t.total,
+          splitUnclaimed: false,
+          at: Date.now(),
+        },
+        people: seat(names),
+        turn: 0,
+        redo: false,
+        at: Date.now(),
+      });
+    }
+    setReseat(false);
+    setScreen("turn");
+  };
+
+  /** Changes the claims of whoever holds the phone. */
+  const claimFor = (index: number, change: (c: Claims) => Claims) => {
+    if (!round) return;
+    buzz();
+    setRound({
+      ...round,
+      people: round.people.map((p, i) => (i === index ? { ...p, claims: change(p.claims) } : p)),
+    });
+  };
+
   const goHome = () => {
-    setBill(null); setShot(null); setErr(""); setSuspect(false);
-    setHostName(""); setBillName(""); setJoinCode(""); setJoinName("");
+    setBill(null); setShot(null); setErr(""); setSuspect(false); setPlace("");
+    setBillName(""); setJoinCode(""); setJoinName(null);
     setScreen("home");
     navigate("/");
   };
@@ -258,6 +311,21 @@ export function App() {
   /* --- render ------------------------------------------------------------ */
 
   const t = bill ? compute(bill) : null;
+
+  if (!myName || renaming) {
+    return (
+      <Name
+        initial={myName}
+        onBack={renaming ? () => setRenaming(false) : undefined}
+        onSave={(n) => {
+          const clean = identityOf(n).name;
+          saveName(clean);
+          setMyName(clean);
+          setRenaming(false);
+        }}
+      />
+    );
+  }
 
   if (code && me && sync.state) {
     return (
@@ -284,13 +352,17 @@ export function App() {
           error={sync.error || err}
           onBack={goHome}
           onChangeName={changeName}
+          flash={flash}
         />
         <Toast message={toast} />
       </>
     );
   }
 
-  if (code && me && !sync.state) {
+  // Joining from a link with a stored name: no form to show, just the wait.
+  const autoJoining = Boolean(code && !me && busy && autoJoined.current === code);
+
+  if ((code && me && !sync.state) || autoJoining) {
     return (
       <div class="paper">
         <div class="sheet">
@@ -305,10 +377,18 @@ export function App() {
     <>
       {screen === "home" && (
         <Home
+          name={myName}
+          onRename={() => setRenaming(true)}
           onCamera={() => { setErr(""); setScreen("camera"); }}
           onManual={() => { setErr(""); setBill(blank()); setScreen("editor"); }}
           onJoin={() => { setErr(""); setScreen("join"); }}
           onResume={(c) => navigate(`/s/${c}`)}
+          round={round ? {
+            label: `${round.meta.billName} · ${
+              round.turn === "tally" ? "tally" : `${round.people[round.turn]?.name}'s turn`
+            }`,
+            open: () => setScreen(round.turn === "tally" ? "tally" : "turn"),
+          } : null}
         />
       )}
 
@@ -336,8 +416,13 @@ export function App() {
           bill={bill}
           setBill={setBill}
           suspect={suspect}
-          onEqual={() => setScreen("equal")}
-          onStart={() => { setErr(""); setScreen("start"); }}
+          onEqual={() => { rememberSteps(compute(bill).steps); setScreen("equal"); }}
+          onStart={() => {
+            rememberSteps(compute(bill).steps);
+            setErr("");
+            setBillName(place || dayMeal());
+            setScreen("choose");
+          }}
           onBack={goHome}
         />
       )}
@@ -349,23 +434,69 @@ export function App() {
           heads={heads}
           setHeads={setHeads}
           onBack={() => setScreen("editor")}
+          flash={flash}
         />
       )}
 
-      {screen === "start" && (
-        <Start
-          hostName={hostName} setHostName={setHostName}
+      {screen === "choose" && (
+        <Chooser
           billName={billName} setBillName={setBillName}
-          onGo={openSplit} onBack={() => setScreen("editor")}
+          fallback={place || dayMeal()}
+          onLink={openSplit}
+          onPhone={() => { setErr(""); setSeatNames([myName]); setReseat(false); setScreen("table"); }}
+          onBack={() => setScreen("editor")}
           busy={busy} error={err}
+        />
+      )}
+
+      {screen === "table" && (
+        <Table
+          initial={seatNames}
+          onStart={startRound}
+          onBack={() => setScreen(reseat ? "turn" : "choose")}
+        />
+      )}
+
+      {screen === "turn" && round && typeof round.turn === "number" && (
+        <Turn
+          key={`${round.turn}-${round.redo}`}
+          round={round}
+          index={round.turn}
+          onTap={(id) => claimFor(round.turn as number, (c) => toggleClaim(c, id))}
+          onBump={(id, d) => claimFor(round.turn as number, (c) => bumpClaim(c, id, d))}
+          onDone={() => {
+            const i = round.turn as number;
+            const end = round.redo || i >= round.people.length - 1;
+            setRound({ ...round, turn: end ? "tally" : i + 1, redo: false });
+            window.scrollTo(0, 0);
+            if (end) setScreen("tally");
+          }}
+          onBack={() => {
+            const i = round.turn as number;
+            if (round.redo) { setRound({ ...round, turn: "tally", redo: false }); setScreen("tally"); }
+            else if (i > 0) setRound({ ...round, turn: i - 1 });
+            else { setSeatNames(round.people.map((p) => p.name)); setReseat(true); setScreen("table"); }
+          }}
+        />
+      )}
+
+      {screen === "tally" && round && (
+        <Tally
+          round={round}
+          onRedo={(i) => { setRound({ ...round, turn: i, redo: true }); window.scrollTo(0, 0); setScreen("turn"); }}
+          onToggleLeftovers={() =>
+            setRound({ ...round, meta: { ...round.meta, splitUnclaimed: !round.meta.splitUnclaimed } })}
+          onBack={goHome}
+          flash={flash}
         />
       )}
 
       {screen === "join" && (
         <Join
           code={joinCode} setCode={setJoinCode}
-          name={joinName} setName={setJoinName}
-          onGo={doJoin} onBack={goHome}
+          name={joinName ?? undefined}
+          setName={joinName === null ? undefined : setJoinName}
+          onGo={() => doJoin(joinCode, joinName ?? myName)} onBack={goHome}
           busy={busy} error={err}
         />
       )}

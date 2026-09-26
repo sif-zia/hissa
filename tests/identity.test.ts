@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { nameKey, slugOf, colorFor, paletteFor, identityOf, randCode, ALPHA } from "../src/lib/identity";
+import { nameKey, slugOf, colorFor, paletteFor, identityOf, randCode, ALPHA, dayMeal } from "../src/lib/identity";
 
 describe("name normalisation", () => {
   it("collapses case and surrounding whitespace to one person", () => {
@@ -95,5 +95,18 @@ describe("palette", () => {
 
   it("leaves a lone person on their own hashed colour", () => {
     expect(paletteFor(["faraz"])["faraz"]).toBe(colorFor("faraz"));
+  });
+});
+
+describe("dayMeal", () => {
+  // 26 Sep 2026 is a Saturday. Local time, because that is when you ate.
+  const at = (h: number, m = 0) => dayMeal(new Date(2026, 8, 26, h, m));
+  it("names the bill after the day and the meal", () => expect(at(20)).toBe("saturday dinner"));
+  it("cuts the day at the bucket edges", () => {
+    expect([at(4, 59), at(5), at(10, 59), at(11), at(15, 59), at(16), at(18, 59), at(19), at(23, 59)])
+      .toEqual([
+        "saturday dinner", "saturday breakfast", "saturday breakfast", "saturday lunch",
+        "saturday lunch", "saturday chai", "saturday chai", "saturday dinner", "saturday dinner",
+      ]);
   });
 });

@@ -10,13 +10,19 @@ plausible-looking change is most likely to break.
 
 ```sh
 pnpm install
-pnpm dev          # app at /app.html, landing at /
+pnpm dev          # app at /app.html, landing at / (returning users are sent to /app; /?about stays)
 pnpm test         # unit tests
 pnpm build        # static build into dist/
 ```
 
 `pnpm dev` serves the client only. The `/api` functions need `vercel dev`
-(and the environment below).
+(and the environment below): `set -a; . ./.env.local; set +a; vercel dev`.
+
+The flow: a name, asked once → home → photo or manual entry → the editor →
+equal split, or a chooser between **share the link** (everyone on their own
+phone, live) and **pass the phone** (one device, turn by turn, nothing
+stored on the server). Every split ends with copy and share-as-image.
+`context/hissa_v2_plan.md` has the why.
 
 ## Environment
 
@@ -72,7 +78,7 @@ Upstash serves single commands at the REST root and batches at `/multi-exec`.
 ## How it fits together
 
 ```
-index.html, how-it-works.html   static, zero JS — the entire SEO surface
+index.html, how-it-works.html   static — the entire SEO surface; one inline script (theme, returning-user redirect)
 app.html  →  src/               the app; noindex, never crawled
 api/                            Vercel Edge functions
   extract.ts                    Gemini proxy, holds the key
@@ -110,7 +116,7 @@ symbol, say).
 
 | | Budget | Actual |
 | --- | --- | --- |
-| App JS | 60 KB gz | **17 KB** |
+| App JS | 60 KB gz | **26 KB** (17 KB before v2) |
 | Landing critical path | — | ~6 KB gz + 35 KB font |
 | Fonts total | 45 KB | **64 KB — over budget** (see `src/styles/fonts.css`) |
 | CLS | 0 | **0** — the rotations cost nothing |

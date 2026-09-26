@@ -6,7 +6,7 @@
 
 import type { BillState } from "./cache";
 import type { Claims } from "./split";
-import type { Line } from "./money";
+import type { Kind, Line } from "./money";
 
 export class ApiError extends Error {
   constructor(message: string, readonly status: number) {
@@ -53,6 +53,7 @@ export interface CreateInput {
   subtotal: number;
   gstPct: number;
   gstAmt: number;
+  serviceAmt: number;
   discountAmt: number;
   tipAmt: number;
   total: number;
@@ -95,10 +96,12 @@ export async function setSplitUnclaimed(code: string, splitUnclaimed: boolean): 
 
 export interface Extracted {
   currency: string;
+  /** The restaurant or shop, from the header; "" when none is printed. */
+  place: string;
   items: { name: string; qty: number; price: number }[];
-  gstPct: number;
-  discount: number;
-  tip: number;
+  adjustments: { kind: Kind; pct: number; amount: number; step: number }[];
+  /** Major units, 0 when no total was printed. */
+  printedTotal: number;
   /** True when the extracted lines did not sum to the printed subtotal. */
   suspect?: boolean;
 }

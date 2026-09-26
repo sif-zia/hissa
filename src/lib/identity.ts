@@ -69,3 +69,14 @@ export const identityOf = (raw: string): Identity => {
   const name = raw.trim().replace(/\s+/g, " ").slice(0, 24);
   return { key: nameKey(name), name, slug: slugOf(name) };
 };
+
+/**
+ * A name for a bill nobody named: when it was eaten. Never random letters.
+ * "saturday dinner", "tuesday chai".
+ */
+export function dayMeal(d: Date = new Date()): string {
+  const day = d.toLocaleDateString("en-GB", { weekday: "long" }).toLowerCase();
+  const h = d.getHours();
+  const meal = h >= 5 && h < 11 ? "breakfast" : h >= 11 && h < 16 ? "lunch" : h >= 16 && h < 19 ? "chai" : "dinner";
+  return `${day} ${meal}`;
+}

@@ -1,6 +1,6 @@
 /** POST /api/bill — freeze a bill and open the split. */
 
-import { handler, readJson, json, clampStr, clampInt, safeSlug, HttpError } from "../_lib/http";
+import { handler, readJson, json, clampStr, clampInt, clampPct, safeSlug, HttpError } from "../_lib/http";
 import { billKey, exists, pipeline, TTL_SECONDS } from "../_lib/redis";
 import { etagOf, type StoredLine, type StoredMeta } from "../_lib/bill";
 
@@ -21,7 +21,7 @@ async function freeCode(): Promise<string> {
 
 interface Body {
   billName?: string; currency?: string; lines?: unknown[];
-  subtotal?: number; gstPct?: number; gstAmt?: number;
+  subtotal?: number; gstPct?: number; gstAmt?: number; serviceAmt?: number;
   discountAmt?: number; tipAmt?: number; total?: number;
   host?: { name?: string; slug?: string };
 }
@@ -56,11 +56,14 @@ export default handler(async (req) => {
   const code = await freeCode();
   const meta: StoredMeta = {
     code,
-    billName: clampStr(body.billName, 40) || randCode(3),
+    // The client always names the bill (the place, or "saturday dinner");
+    // this is only for a caller that didn't. Never gibberish.
+    billName: clampStr(body.billName, 40) || "the bill",
     currency: clampStr(body.currency, 4) || "Rs",
     lines,
     subtotal,
-    gstPct: clampInt(body.gstPct, 0, 100),
+    gstPct: clampPct(body.gstPct),
+    serviceAmt: clampInt(body.serviceAmt, 0, 100_000_000),
     gstAmt: clampInt(body.gstAmt, 0, 100_000_000),
     discountAmt: clampInt(body.discountAmt, 0, 100_000_000),
     tipAmt: clampInt(body.tipAmt, 0, 100_000_000),

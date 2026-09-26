@@ -109,6 +109,8 @@ Per line: **name**, **quantity**, **price**. A single global toggle switches the
 
 Below the lines:
 
+> **v2:** the order of operations below is now the *default* stacking, not the only one. See `hissa_v2_plan.md` §3.
+
 | Field | Type | Applied to |
 | --- | --- | --- |
 | GST | percentage | subtotal |

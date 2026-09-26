@@ -52,6 +52,20 @@ export function forgetMe(code: string): void {
   }
 }
 
+/*
+ * Device-wide preferences. Stored WITHOUT an `at`, which is what keeps
+ * sweep() from treating them as a day-old bill and deleting them.
+ */
+export const loadPref = <T>(name: string): T | null => read<T>(`hissa:${name}`);
+export const savePref = (name: string, v: unknown): void => write(`hissa:${name}`, v);
+
+/** The one name this device goes by. Asked once, changeable from Home. */
+export const loadName = (): string => {
+  const n = loadPref<unknown>("name");
+  return typeof n === "string" ? n : "";
+};
+export const saveName = (n: string): void => savePref("name", n);
+
 export const loadBill = (code: string): Cached | null => read<Cached>(key("bill", code));
 export const saveBill = (code: string, etag: string, state: BillState): void =>
   write(key("bill", code), { etag, state, at: Date.now() } satisfies Cached);

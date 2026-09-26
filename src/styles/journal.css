@@ -708,3 +708,147 @@ button, input, select, textarea { font: inherit; color: inherit; }
 .stub:hover { transform: rotate(var(--tilt)) translate(-1px, -2px); box-shadow: var(--shadow-lift); }
 .stub:active { transform: rotate(var(--tilt)) translate(2px, 2px); box-shadow: 1px 1px 0 rgba(43, 41, 37, 0.14); }
 .stub span { font-family: var(--scrawl); font-weight: 400; font-size: 1.05em; color: var(--ink-3); letter-spacing: 0; }
+
+/* ------------------------------------------------ how the extras stack */
+
+/* The sentence is the control: handwritten, underlined, one tap to open. */
+.worked { text-align: left; font-size: 1.1em; line-height: 1.3; }
+
+/* One way of working it out: full-width, thumb-sized, sentence then total. */
+.pick {
+  display: flex;
+  width: 100%;
+  min-height: 44px;
+  justify-content: space-between;
+  align-items: center;
+  gap: var(--gap);
+  text-align: left;
+  background: none;
+  border: none;
+  border-bottom: 1.5px dashed var(--ink-line);
+  padding: 8px 4px;
+  cursor: pointer;
+  font: inherit;
+  color: inherit;
+}
+.pick:last-of-type { border-bottom: none; }
+.pick.on { box-shadow: inset 3px 0 0 var(--rose); background: color-mix(in srgb, var(--rose) 11%, transparent); }
+
+/* ------------------------------------------------- full-screen camera */
+
+/*
+ * A camera app, written in the journal's hand. Not the Fullscreen API:
+ * iPhone Safari only grants that to <video>, and hands it to the native
+ * player. A fixed layer over the viewport does the same job everywhere.
+ */
+.cam {
+  position: fixed;
+  inset: 0;
+  height: 100dvh;
+  z-index: 40;
+  background: #17150f;
+  overflow: hidden;
+  touch-action: manipulation;
+}
+.cam-video {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+/* Pencil strokes over a photo: paper-coloured, with a soft ink shadow so
+   they read on a white receipt and a dark table alike. */
+.cam-frame, .cam-ring {
+  pointer-events: none;
+  fill: none;
+  stroke: var(--paper);
+  stroke-linecap: round;
+  filter: drop-shadow(0 1px 1.5px rgba(23, 21, 15, 0.7));
+}
+.cam-frame {
+  position: absolute;
+  inset: calc(78px + env(safe-area-inset-top)) 9% calc(132px + env(safe-area-inset-bottom));
+  width: 82%;
+  height: calc(100% - 210px - env(safe-area-inset-top) - env(safe-area-inset-bottom));
+  stroke-width: 3.2;
+  vector-effect: non-scaling-stroke;
+}
+.cam-frame path { vector-effect: non-scaling-stroke; }
+
+.cam-note {
+  position: absolute;
+  top: calc(92px + env(safe-area-inset-top));
+  left: 50%;
+  margin: 0;
+  translate: -50% 0;
+  text-align: center;
+  color: var(--ink);
+  pointer-events: none;
+  animation: cam-note-out 0.6s ease 1.5s forwards;
+}
+@keyframes cam-note-out { to { opacity: 0; visibility: hidden; } }
+
+.cam-ring {
+  position: absolute;
+  width: 64px;
+  height: 64px;
+  translate: -50% -50%;
+  stroke-width: 2.6;
+  animation: cam-ring 0.6s ease-out forwards;
+}
+@keyframes cam-ring {
+  from { opacity: 0; transform: scale(1.5) rotate(-12deg); }
+  30%  { opacity: 1; }
+  to   { opacity: 0.9; transform: scale(1) rotate(0); }
+}
+
+.cam-wait {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  margin: 0;
+  color: var(--paper);
+  pointer-events: none;
+}
+
+.cam-top, .cam-bottom {
+  position: absolute;
+  left: 0;
+  right: 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-inline: max(16px, env(safe-area-inset-left)) max(16px, env(safe-area-inset-right));
+}
+.cam-top { top: 0; padding-top: calc(16px + env(safe-area-inset-top)); }
+.cam-bottom {
+  bottom: 0;
+  padding-bottom: calc(24px + env(safe-area-inset-bottom));
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+}
+.cam-bottom > :first-child { justify-self: start; }
+
+/* Paper stubs over the photo; the same hard shadow, a finger-sized target. */
+.cam-btn { min-height: 44px; min-width: 44px; justify-content: center; letter-spacing: 0; }
+.cam-btn svg { fill: none; stroke: currentColor; stroke-width: 2.4; stroke-linecap: round; stroke-linejoin: round; }
+.cam-btn span { font-family: var(--hand); color: var(--ink); font-size: var(--step--1); }
+.cam-btn.on { background: var(--ink); color: var(--paper); border-color: var(--ink); }
+.cam-btn.on span { color: var(--paper); }
+.cam-btn.on svg { fill: currentColor; }
+
+.cam-err {
+  position: absolute;
+  left: 16px;
+  right: 16px;
+  bottom: calc(132px + env(safe-area-inset-bottom));
+  margin: 0;
+  color: var(--warn);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .cam-ring { animation: none; }
+}

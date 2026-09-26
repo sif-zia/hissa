@@ -24,6 +24,8 @@ export interface BillMeta {
   subtotal: number;
   gstPct: number;
   gstAmt: number;
+  /** v2; absent on bills opened before it. */
+  serviceAmt?: number;
   discountAmt: number;
   tipAmt: number;
   total: number;
@@ -38,6 +40,10 @@ export interface Spread {
   loose: number;
   /** lineId -> the people on it, in claim order */
   byLine: Record<string, Person[]>;
+  /** lineId -> key -> that person's cut of the line, minor units */
+  cuts: Record<string, Record<string, number>>;
+  /** key -> their slice of the shared leftovers, subtotal-scale */
+  leftover: Record<string, number>;
 }
 
 /**
@@ -60,6 +66,8 @@ export function cutsFor(amt: number, portions: number[]): number[] {
 
 export function spread(meta: BillMeta, people: Person[]): Spread {
   const byLine: Record<string, Person[]> = {};
+  const cuts: Record<string, Record<string, number>> = {};
+  const leftover: Record<string, number> = {};
   const subShare: Record<string, number> = {};
   people.forEach((p) => {
     subShare[p.key] = 0;
@@ -73,9 +81,11 @@ export function spread(meta: BillMeta, people: Person[]): Spread {
       loose += line.amt;
       continue;
     }
-    const cuts = cutsFor(line.amt, on.map((p) => p.claims[line.id] as number));
+    const cut = cutsFor(line.amt, on.map((p) => p.claims[line.id] as number));
+    cuts[line.id] = {};
     on.forEach((p, i) => {
-      subShare[p.key] = (subShare[p.key] ?? 0) + (cuts[i] as number);
+      cuts[line.id]![p.key] = cut[i] as number;
+      subShare[p.key] = (subShare[p.key] ?? 0) + (cut[i] as number);
     });
   }
 
@@ -85,12 +95,13 @@ export function spread(meta: BillMeta, people: Person[]): Spread {
     const per = Math.floor(loose / active.length);
     const rem = loose - per * active.length;
     active.forEach((p, i) => {
-      subShare[p.key] = (subShare[p.key] ?? 0) + per + (i < rem ? 1 : 0);
+      leftover[p.key] = per + (i < rem ? 1 : 0);
+      subShare[p.key] = (subShare[p.key] ?? 0) + leftover[p.key]!;
     });
     loose = 0;
   }
 
-  return { subShare, loose, byLine };
+  return { subShare, loose, byLine, cuts, leftover };
 }
 
 /**
@@ -107,4 +118,21 @@ export function equalSplit(total: number, n: number): { base: number; extra: num
   if (n <= 0) return { base: 0, extra: 0 };
   const base = Math.floor(total / n);
   return { base, extra: total - base * n };
+}
+
+/** Tap a line: claim one portion, or let go of it entirely. */
+export function toggleClaim(claims: Claims, lineId: string): Claims {
+  const next = { ...claims };
+  if (next[lineId]) delete next[lineId];
+  else next[lineId] = 1;
+  return next;
+}
+
+/** The ×N stepper. Zero portions is no claim; 20 is the ceiling. */
+export function bumpClaim(claims: Claims, lineId: string, delta: number): Claims {
+  const next = { ...claims };
+  const v = (next[lineId] ?? 0) + delta;
+  if (v <= 0) delete next[lineId];
+  else next[lineId] = Math.min(v, 20);
+  return next;
 }

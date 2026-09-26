@@ -47,6 +47,50 @@ export async function share(code: string, billName: string): Promise<"shared" | 
   return (await copy(url)) ? "copied" : "failed";
 }
 
+/**
+ * The result card, through the share sheet where the device can attach
+ * files, downloaded everywhere else. The blob must already exist: iOS drops
+ * the share sheet once the tap's user activation has expired, and waiting
+ * on fonts and toBlob inside the tap can spend it.
+ */
+export async function shareImage(
+  blob: Blob,
+  text: string,
+  filename: string,
+): Promise<"shared" | "saved" | "failed"> {
+  const file = new File([blob], filename, { type: "image/png" });
+  if (navigator.canShare?.({ files: [file] })) {
+    try {
+      await navigator.share({ files: [file], text });
+      return "shared";
+    } catch (e) {
+      if (e instanceof Error && e.name === "AbortError") return "failed";
+    }
+  }
+  try {
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = filename;
+    a.click();
+    setTimeout(() => URL.revokeObjectURL(url), 2000);
+    return "saved";
+  } catch {
+    return "failed";
+  }
+}
+
+/** Where people can find this, for the footer of a shared result. */
+export const site = (): string => {
+  try {
+    const { host, protocol } = window.location;
+    if (protocol === "https:" || protocol === "http:") return host;
+  } catch {
+    // sandboxed
+  }
+  return "hissa.itisamzia.dev";
+};
+
 export const buzz = (ms = 10): void => {
   try {
     navigator.vibrate?.(ms);

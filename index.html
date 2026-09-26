@@ -46,6 +46,8 @@
           "Reads a bill from a photo",
           "Tap-to-claim per item",
           "Equal split calculator",
+          "Pass the phone: split on one device, turn by turn",
+          "Share the result as text or an image",
           "Shared live split by four-letter code",
           "Works offline as an installable web app"
         ]
@@ -55,6 +57,11 @@
       // Inline and before paint: a stored theme must not arrive after the
       // first frame. This is the only script on these pages.
       try {
+        // Someone who has used the app before goes straight to it; the story
+        // is one link away at /?about. Bare /app: cleanUrls 308s the .html form.
+        if (localStorage.getItem("hissa:name") && !/[?&]about\b/.test(location.search)) {
+          location.replace("/app");
+        }
         document.documentElement.setAttribute(
           "data-theme",
           localStorage.getItem("hissa:theme") || "light",
@@ -130,14 +137,16 @@
               <strong>2 &middot; pass the code</strong>
               <p style="margin: 4px 0 0">
                 four letters. read them across the table or send the link. no account, no install,
-                nobody downloads anything.
+                nobody downloads anything. only three or four of you? <em>pass the phone</em> round
+                instead &mdash; everyone takes a turn on one screen.
               </p>
             </li>
             <li class="sticky" style="--tilt: -1.6deg">
               <strong>3 &middot; everyone taps</strong>
               <p style="margin: 4px 0 0">
                 tap what you ate. shared a plate? tap it twice. your number sits at the bottom of
-                the screen and updates as people go.
+                the screen and updates as people go. then send the result to the group chat, as text
+                or as a picture.
               </p>
             </li>
           </ol>
@@ -153,8 +162,9 @@
             of it.
           </p>
           <p class="field-note" data-label="tax and tip">
-            gst, discount and tip ride along proportionally. you never pay tip on someone else's
-            steak.
+            gst, service, discount and tip ride along proportionally. you never pay tip on someone
+            else's steak. discount before tax or after? hissa checks the arithmetic against the
+            printed total and picks the one that matches.
           </p>
           <p class="field-note" data-label="the rounding">
             every line is distributed to the last paisa. the group can't under-cover a bill by
