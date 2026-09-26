@@ -90,6 +90,7 @@ Each of these was a real bug found by running the app, not a hypothetical:
 - **Discounts arrived as zero.** Bills print them as `-348`; the reading kept only positive amounts. Amounts are read by magnitude now.
 - **The picker contradicted itself.** Two stackings with the same total: the list named one, the "worked out" line the other.
 - **`/?about` would have opened the app.** Workbox matches pathname *and* search, so the service worker denylist needs `^\/(\?.*)?$`, not `^\/$`.
+- **Quick taps erased each other.** Tap handlers built the next claims from the render-time value, so a second tap before a re-render overwrote the first — locally and on the server. Found on production. Pass the phone uses a functional `setRound`; the live split reads claims from `mineRef`.
 - **Chip colours collided** — hash-to-palette put two people at a table on the same colour. `paletteFor` resolves collisions off a sorted key list so every device agrees.
 
 ## Design language
