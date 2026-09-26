@@ -58,7 +58,23 @@
             "name": "How are tax and tip divided?",
             "acceptedAnswer": {
               "@type": "Answer",
-              "text": "Proportionally. Your share of the subtotal is scaled up to the final total, so GST, discount and tip ride along with what you actually ordered. You never pay tip on someone else's steak."
+              "text": "Proportionally. Your share of the subtotal is scaled up to the final total, so GST, service charge, discount and tip ride along with what you actually ordered. Whether the discount came before or after tax is read off the bill: Hissa tries each order and keeps the one that matches the printed total. You never pay tip on someone else's steak."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "Can we split a bill on one phone?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Yes. Choose pass the phone: enter everyone's names, and each person takes a turn tapping what they had before handing the phone on. The tally at the end can be shared as text or as an image. It needs no internet connection."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "Does Hissa work offline?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Entering a bill by hand, splitting it equally and passing the phone all work offline. Reading a photo of the bill, sharing a link and joining someone's split need a connection."
             }
           },
           {
@@ -151,12 +167,35 @@
         <hr class="rule-dash" style="margin: 30px 0" />
 
         <section>
-          <h2 class="tilt" style="--tilt: -0.6deg">tax, discount, tip</h2>
+          <h2 class="tilt" style="--tilt: -0.6deg">tax, service, discount, tip</h2>
           <div class="prose">
             <p>
-              gst applies to the subtotal. discount and tip both apply after gst. your own number is
-              your share of the subtotal, scaled up to the final total &mdash; so everything rides
-              along in proportion to what you ordered.
+              your own number is your share of the subtotal, scaled up to the final total &mdash; so
+              gst, service charge, discount and tip all ride along in proportion to what you
+              ordered.
+            </p>
+            <p>
+              bills disagree about the order: some take the discount before tax, some after, some
+              put service on top of both. hissa tries every order against the total printed on the
+              bill and keeps the one that matches, down to the rupee. when a bill doesn't add up by
+              any reading, it takes the closest and says how far off it is.
+            </p>
+          </div>
+        </section>
+
+        <hr class="rule-dash" style="margin: 30px 0" />
+
+        <section>
+          <h2 class="tilt" style="--tilt: 1.2deg">one phone, or everyone's</h2>
+          <div class="prose">
+            <p>
+              five or more of you: share the link and everyone taps on their own phone at once. a
+              smaller table can <em>pass the phone</em> &mdash; each person takes a turn, and the
+              tally at the end goes to the group chat as text or a picture.
+            </p>
+            <p>
+              entering a bill, splitting it equally and passing the phone all work offline. reading
+              a photo, sharing a link and joining a split need a connection.
             </p>
           </div>
         </section>
