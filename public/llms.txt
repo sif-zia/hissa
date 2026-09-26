@@ -1,0 +1,28 @@
+# Hissa
+
+> Hissa splits a restaurant bill. Photograph the bill, everyone taps what they ate, and everyone sees their share, with tax, service charge, discount and tip divided in proportion to what each person ordered. It is a free web app: no account, no login, no install.
+
+"Hissa" is Urdu for share or portion. It was built for bills in Pakistan (Rs, GST/SST, service charges) and works with any currency.
+
+## How it works
+
+- Photograph the bill (or type the lines in). A vision model reads the items, tax, service charge, discount and tip, and you check them before anything is split.
+- When a bill is ambiguous about whether the discount came before or after tax, Hissa tries every order against the printed total and keeps the one that matches.
+- Split three ways: equally; by sharing a link or four-letter code so everyone taps on their own phone; or by passing one phone around the table.
+- Shared plates are split by portion. Unclaimed items stay visible and can be shared among everyone who ate.
+- Results can be shared to a group chat as text or as an image.
+- Entering a bill, equal splits and pass the phone work offline. Reading a photo and live link splits need a connection.
+
+## Privacy
+
+- The receipt photo is sent once to be read and is never stored.
+- A shared split expires after 24 hours. There are no accounts; a person is identified only by the name they type.
+
+## Pages
+
+- [Hissa](https://hissa.itisamzia.dev/): what it is and how it goes
+- [How Hissa splits a bill](https://hissa.itisamzia.dev/how-it-works): the maths, the privacy, the limits
+
+## Not for crawling
+
+- `/app`, `/s/<code>` and `/api/` are the app, individual people's bills, and its API. They are private, short-lived and not indexed.
