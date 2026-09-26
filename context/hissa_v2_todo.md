@@ -403,18 +403,31 @@ Driven through the **Claude-in-Chrome extension** in the user's Chrome, with no 
 - [x] Open a PR `v2` → `master` with the plan link, the before/after budgets, the receipt table and the device matrix results. Merge after review. _https://github.com/sif-zia/hissa/pull/1, merged. No device-matrix results: shipped on your call_
 - [x] Deploy production using the method recorded in Phase 0 (`vercel --prod`, or the merge if git integration is on). _the merge auto-deployed, and `vercel --prod` ran 12s later with the same commit; the domain points to the CLI one_
 - [x] Note the previous production deployment URL first, as the rollback target. _https://hissa-pq56od28h-itisamzia-6578s-projects.vercel.app_
-- [ ] Post-deploy on `https://hissa.itisamzia.dev`:
+- [x] Post-deploy on `https://hissa.itisamzia.dev`:
   - [x] Re-run the Name, Link split and Detection flows against production through the Chrome extension _found the quick-tap bug, fixed in 2.0.1_
-  - [ ] one real receipt end to end, both split types, share image to a real chat
+  - [ ] one real receipt end to end, both split types, share image to a real chat _Mandi House uploaded through the UI (11,661.60 ✓), then pass the phone and joining a live split. Sharing into a real chat not done: that needs you_
   - [x] the v1 compatibility check from Phase 10 _this Chrome had v1 installed. v1's join form ran against the v2 server, and one reload brought up v2 through `autoUpdate`_
-- [ ] Watch for 24h: `vercel logs` for 4xx/5xx on `/api/extract` and `/api/bill*`, and Gemini 400/404s (model or schema rejections), and Upstash usage.
+- [ ] Watch for 24h: `vercel logs` for 4xx/5xx on `/api/extract` and `/api/bill*`, and Gemini 400/404s (model or schema rejections), and Upstash usage. _snapshot only, an hour after release: no errors or warnings; extract 200, bill 200/304, claims 200. The 24h watch is still open_
 - [ ] **Rollback:**
-  - [ ] `vercel rollback <previous-url>`.
+  - [ ] `vercel rollback <previous-url>`. _not needed. Target: hissa-pq56od28h (v1)_
   - [x] Data is compatible both ways: v1 ignores `serviceAmt`, and the new localStorage keys are ignored by v1.
   - [x] Installed PWAs would hold v2 until the service worker updates again, and they keep working against the v1 API only if extract still returns the legacy fields. It does, and the v1 API ignores extra fields.
-- [ ] Tag the release: `git tag v2.0.0 && git push --tags`, and bump `package.json` `version` to `2.0.0` in the release commit.
+- [x] Tag the release: `git tag v2.0.0 && git push --tags`, and bump `package.json` `version` to `2.0.0` in the release commit. _:v2.0.0 (2b7fa33) and v2.0.1 (7f94ffa) pushed; package.json is 2.0.1_
 
 ---
+
+## Release notes
+
+- **2.0.0**: merged in https://github.com/sif-zia/hissa/pull/1 and deployed 2026-09-26.
+- **2.0.1**: merged in https://github.com/sif-zia/hissa/pull/2. Two taps before a re-render erased each other; found on production within minutes of 2.0.0.
+
+## Still open
+
+- Real-device checks (the device matrix above): tap-to-focus and flash on Android, the iOS share sheet, installed PWA, VoiceOver/TalkBack.
+- Sharing the image and text into WhatsApp, iMessage and Slack.
+- The 24h log watch.
+- A 20+ line bill in the receipt set.
+- App JS is 25.84 KB gz, over the self-set 25 KB target (the 60 KB ceiling holds).
 
 ## Follow-up (one week after release)
 
