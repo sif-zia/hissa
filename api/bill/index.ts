@@ -1,8 +1,8 @@
 /** POST /api/bill — freeze a bill and open the split. */
 
-import { handler, readJson, json, clampStr, clampInt, clampPct, safeSlug, HttpError } from "../_lib/http";
-import { billKey, exists, pipeline, TTL_SECONDS } from "../_lib/redis";
-import { etagOf, type StoredLine, type StoredMeta } from "../_lib/bill";
+import { handler, readJson, json, clampStr, clampInt, clampPct, safeSlug, HttpError } from "../_lib/http.js";
+import { billKey, exists, pipeline, TTL_SECONDS } from "../_lib/redis.js";
+import { etagOf, type StoredLine, type StoredMeta } from "../_lib/bill.js";
 
 export const config = { runtime: "edge" };
 

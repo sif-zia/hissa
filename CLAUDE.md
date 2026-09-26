@@ -36,7 +36,7 @@ The name is asked once (entry 00), then: home → capture → preview → editor
 
 ## Stack
 
-Vite (multi-page) + Preact via `preact/compat` + TypeScript; `wouter-preact` for `/s/:code`; plain CSS with custom properties; `vite-plugin-pwa`. API is Vercel Edge functions over Upstash Redis. Extraction proxies Gemini server-side.
+Vite (multi-page) + Preact via `preact/compat` + TypeScript; `wouter-preact` for `/s/:code`; plain CSS with custom properties; `vite-plugin-pwa`. API is Vercel functions over Upstash Redis: the bill endpoints on Edge, `/api/extract` on Node.js (see below). Extraction proxies Gemini server-side.
 
 Still explicitly rejected: Next.js, a utility CSS framework, TanStack Query, Zustand, Tesseract, classical OCR.
 
@@ -87,6 +87,8 @@ Each of these was a real bug found by running the app, not a hypothetical:
 - **Upstash batches** go to `/multi-exec`, not the base URL. Posting to the root fails with "unsupported arg type".
 - **`cleanUrls` 308s `/app.html` → `/app`**, so the rewrite target must be `/app` or the code in the URL is thrown away.
 - **The poll ran at ~2x.** Keying the timer effect on `state` tore it down on every arriving claim. It is keyed on the bill's open time now.
+- **A slow read was killed at 25s.** Edge functions must send a first byte within 25s; one Gemini read took longer in production and returned a 504. `/api/extract` runs on Node (`maxDuration: 60`, `export const POST`).
+- **Node wants file extensions.** The Edge bundler resolved `./_lib/http`; Node's ESM loader does not, and every call failed with `ERR_MODULE_NOT_FOUND`. Relative imports under `api/` end in `.js`. Only visible on a deployment.
 - **Paper vanished over the camera in dark mode.** The viewfinder's strokes and stubs used the theme's "paper", which is dark brown in dark mode. `.cam` pins the light palette.
 - **Two taxes, one total.** "Use the lower rate" paired a card-rate 8% with the cash total. The prompt now keeps a tax and its total together.
 - **Discounts arrived as zero.** Bills print them as `-348`; the reading kept only positive amounts. Amounts are read by magnitude now.

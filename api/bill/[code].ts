@@ -1,8 +1,8 @@
 /** GET /api/bill/:code — the whole split, or 304 if the caller is current. */
 
-import { handler, json, codeFrom, HttpError } from "../_lib/http";
-import { billKey } from "../_lib/redis";
-import { loadBill, etagOf } from "../_lib/bill";
+import { handler, json, codeFrom, HttpError } from "../_lib/http.js";
+import { billKey } from "../_lib/redis.js";
+import { loadBill, etagOf } from "../_lib/bill.js";
 
 export const config = { runtime: "edge" };
 

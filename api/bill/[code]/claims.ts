@@ -6,9 +6,9 @@
  * no two of them ever write the same field. Spec §5.
  */
 
-import { handler, readJson, json, codeFrom, clampStr, clampInt, safeSlug, HttpError } from "../../_lib/http";
-import { billKey, exists, writeField } from "../../_lib/redis";
-import { etagOf } from "../../_lib/bill";
+import { handler, readJson, json, codeFrom, clampStr, clampInt, safeSlug, HttpError } from "../../_lib/http.js";
+import { billKey, exists, writeField } from "../../_lib/redis.js";
+import { etagOf } from "../../_lib/bill.js";
 
 export const config = { runtime: "edge" };
 

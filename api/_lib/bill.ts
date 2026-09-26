@@ -1,7 +1,7 @@
 /** Shape of what is stored, and how it is read back out of the hash. */
 
-import { hgetall } from "./redis";
-import { HttpError } from "./http";
+import { hgetall } from "./redis.js";
+import { HttpError } from "./http.js";
 
 export interface StoredLine { id: string; name: string; qty: number; amt: number }
 
