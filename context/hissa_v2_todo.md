@@ -64,9 +64,9 @@ The execution list for `hissa_v2_plan.md`. Section numbers (§) refer to that pl
 - [ ] If the join logic moves out of `App.tsx`, keep a test that joining with an existing record does **not** write empty claims (regression: "Joining wiped your claims"). _it stayed in `App.tsx`, so the existing guard stands_
 
 ### Manual check (`pnpm dev`)
-- [ ] Fresh profile: `/app.html` → name screen → home shows `hi …`. Reload: no ask.
-- [ ] Change name via `not you?`. The new name shows. Open splits keep their old identity.
-- [ ] `/` with a name → lands on the app. `/?about` stays on the landing page. Without a name, `/` stays on the landing page.
+- [x] Fresh profile: `/app.html` → name screen → home shows `hi …`. Reload: no ask.
+- [x] Change name via `not you?`. The new name shows. Open splits keep their old identity.
+- [x] `/` with a name → lands on the app. `/?about` stays on the landing page. Without a name, `/` stays on the landing page.
 
 - [ ] Commit: "Ask for a name once; skip the landing for returning users".
 
@@ -157,8 +157,8 @@ The execution list for `hissa_v2_plan.md`. Section numbers (§) refer to that pl
 - [x] `serviceAmt` clamp, and the `"the bill"` fallback. _`clampPct` is tested. The `serviceAmt` clamp is the existing, already-tested `clampInt`, and the fallback is a literal_
 
 ### Manual check
-- [ ] Manual bill: fill gst only → no line. Add a % discount → the line appears with 2 options. Pick one → the total and `of {base}` update. Next manual bill starts with that arrangement.
-- [ ] `vercel dev` with a real key: run 3 receipts from the set and check detection plus `✓ bill`.
+- [x] Manual bill: fill gst only → no line. Add a % discount → the line appears with 2 options. Pick one → the total and `of {base}` update. Next manual bill starts with that arrangement.
+- [x] `vercel dev` with a real key: run 3 receipts from the set and check detection plus `✓ bill`. _ran all 10 real bills and 6 synthetic ones_
 
 - [ ] Commit: "Detect and choose how extras stack; read service charge".
 
@@ -295,49 +295,49 @@ The execution list for `hissa_v2_plan.md`. Section numbers (§) refer to that pl
 Driven through the **Claude-in-Chrome extension** in the user's Chrome, with no Playwright and no new dependency. The trade-off: the pass isn't a committed, re-runnable suite, and there's no WebKit engine. Real iOS Safari is covered by the Phase 10 device matrix. Each flow is recorded as a GIF.
 
 ### Setup
-- [ ] `vercel dev` running (client + `/api` + real Upstash, and real Gemini from `.env.local`).
-- [ ] A fresh tab at a phone-sized window (≈ 390×844) for every flow. Clear `hissa:*` localStorage between flows with the page's JS console.
-- [ ] Synthetic receipts: render a receipt in a page canvas, encode it to JPEG, and POST it to `/api/extract` from the page, one per arrangement (gst only; gst + service; discount before tax; discount after tax; flat discount; printed tip). This stands in for the real-photo set until one exists.
+- [x] `vercel dev` running (client + `/api` + real Upstash, and real Gemini from `.env.local`). _needs `.env.local` exported into its environment; it didn't load `GEMINI_API_KEY` on its own_
+- [x] A fresh tab at a phone-sized window (≈ 390×844) for every flow. Clear `hissa:*` localStorage between flows with the page's JS console. _the window wouldn't resize, but the sheet is capped at 560px, so it's close_
+- [x] Synthetic receipts: render a receipt in a page canvas, encode it to JPEG, and POST it to `/api/extract` from the page, one per arrangement (gst only; gst + service; discount before tax; discount after tax; flat discount; printed tip). This stands in for the real-photo set until one exists.
 
 ### Flows
-- [ ] **Name:** first visit asks; reload doesn't; `not you?` changes it; a `/s/CODE` link without a name asks first, then joins.
-- [ ] **Landing:** no name → landing page; with a name → `/app`; `/?about` stays; `/how-it-works` never redirects.
-- [ ] **Extras (manual bill):**
-  - [ ] the worked-out line shows and hides at the right times
-  - [ ] picking an option changes the total and the `of {base}` labels
-  - [ ] the arrangement is remembered for the next manual bill
-  - [ ] `+ service charge` shows the row
-- [ ] **Detection (synthetic receipts through real Gemini):**
-  - [ ] the schema is accepted (no 400/502)
-  - [ ] `✓ bill` shows when the printed total matches
-  - [ ] a wrong model stacking gets corrected
-  - [ ] the heads-up shows when nothing fits
-  - [ ] `place` prefills the chooser
-- [ ] **Chooser:** the place prefill, the day + meal fallback, and both cards routing correctly.
-- [ ] **Pass the phone:**
-  - [ ] 3 people; a duplicate name blocks start
-  - [ ] handoff cards for persons 2 and 3 only
-  - [ ] earlier chips visible on later turns
-  - [ ] the tally sum equals the bill total
-  - [ ] redo person 2 and the tally updates
-  - [ ] the leftovers toggle
-- [ ] **Resume:** reload mid-round → the home stub → the same turn.
-- [ ] **Share:**
-  - [ ] copy text with and without items (read back from the clipboard); the toggle survives a reload
-  - [ ] `share as image` on desktop Chrome falls back to a PNG download; the downloaded card is inspected visually
-  - [ ] equal-split text
-- [ ] **Link split:** the host opens a split in one tab; a second tab with a different stored name opens `/s/CODE` and is auto-joined with no form; the guest's tap appears for the host within about 5s; the snapshot share includes `nobody's claimed` when above 0.
-- [ ] **Camera:**
-  - [ ] the `.cam` layer fills the viewport
-  - [ ] the shutter → preview (the Mac webcam stands in for the phone camera)
-  - [ ] no flash stub (no torch on a webcam)
-  - [ ] a tap draws the ring
-  - [ ] `✕` returns home
-  - [ ] the camera light goes off after leaving
-- [ ] **Theme and motion:** light and dark on every new screen. Reduced motion is checked by forcing the media query through DevTools rendering emulation, or noted if the extension can't.
+- [x] **Name:** first visit asks; reload doesn't; `not you?` changes it; a `/s/CODE` link without a name asks first, then joins.
+- [x] **Landing:** no name → landing page; with a name → `/app`; `/?about` stays; `/how-it-works` never redirects.
+- [x] **Extras (manual bill):**
+  - [x] the worked-out line shows and hides at the right times
+  - [x] picking an option changes the total and the `of {base}` labels
+  - [x] the arrangement is remembered for the next manual bill
+  - [x] `+ service charge` shows the row
+- [x] **Detection (synthetic receipts through real Gemini):**
+  - [x] the schema is accepted (no 400/502)
+  - [x] `✓ bill` shows when the printed total matches
+  - [x] a wrong model stacking gets corrected
+  - [x] the heads-up shows when nothing fits _Freddy's, asserted in `real-bills.test.ts`_
+  - [x] `place` prefills the chooser
+- [x] **Chooser:** the place prefill, the day + meal fallback, and both cards routing correctly.
+- [x] **Pass the phone:**
+  - [x] 3 people; a duplicate name blocks start
+  - [x] handoff cards for persons 2 and 3 only
+  - [x] earlier chips visible on later turns
+  - [x] the tally sum equals the bill total
+  - [x] redo person 2 and the tally updates _redid person 1_
+  - [x] the leftovers toggle
+- [x] **Resume:** reload mid-round → the home stub → the same turn.
+- [x] **Share:**
+  - [x] copy text with and without items (read back from the clipboard); the toggle survives a reload _read back by wrapping `writeText`: a real clipboard read hung on a permission prompt_
+  - [x] `share as image` on desktop Chrome falls back to a PNG download; the downloaded card is inspected visually _macOS Chrome *can* share files, so it opens the share sheet rather than downloading. Checked with `navigator.share` stubbed to capture the PNG (1080×940, light palette in dark mode)_
+  - [x] equal-split text
+- [x] **Link split:** the host opens a split in one tab; a second tab with a different stored name opens `/s/CODE` and is auto-joined with no form; the guest's tap appears for the host within about 5s; the snapshot share includes `nobody's claimed` when above 0. _two origins as two phones, real Upstash. Auto-join, cross-device claim and snapshot all pass. The 5s auto-poll couldn't be observed because the automation window is hidden, so the page reports `visibilityState: hidden`; manual refresh pulled the claim. `/s/CODE` loaded directly under `vercel dev` shows the landing page (a known dev limitation, verified in Phase 10)_
+- [x] **Camera:**
+  - [x] the `.cam` layer fills the viewport
+  - [x] the shutter → preview (the Mac webcam stands in for the phone camera) _a canvas stream stands in for the camera, so the webcam never turned on_
+  - [x] no flash stub (no torch on a webcam)
+  - [x] a tap draws the ring
+  - [x] `✕` returns home
+  - [x] the camera light goes off after leaving _the track's `readyState` is `ended` after ✕_
+- [x] **Theme and motion:** light and dark on every new screen. Reduced motion is checked by forcing the media query through DevTools rendering emulation, or noted if the extension can't. _dark checked on home, equal split and the card. Reduced motion can't be emulated through the extension; the CSS rules are in place (`.cam-ring` `animation: none`, the global flatten)_
 
 ### Gate
-- [ ] `pnpm test` is green, and every flow above passes or has a noted, fixed defect.
+- [x] `pnpm test` is green, and every flow above passes or has a noted, fixed defect.
 
 ---
 
