@@ -33,7 +33,7 @@ The execution list for `hissa_v2_plan.md`. Section numbers (§) refer to that pl
   - [x] no tax at all
   - [ ] a long bill (20+ lines) _not covered; the longest is 9 lines (Urban Tarka)_
   - [x] a crumpled or low-light photo _Freddy's (crumpled) and Saltanat (held in hand at night)_
-- [x] Decide how production deploys happen (git integration vs `vercel --prod`) by checking the project's Git settings in the dashboard. Record it here: `vercel --prod` (CLI). _every deploy so far is CLI `vercel --prod`, with no git integration_
+- [x] Decide how production deploys happen (git integration vs `vercel --prod`) by checking the project's Git settings in the dashboard. Record it here: merging to `master` (git integration); `vercel --prod` also works. _wrong: every deploy so far had come from the CLI, but git integration **is** connected, and merging to master deploys production on its own (found in Phase 11)_
 
 ---
 
@@ -388,10 +388,10 @@ Driven through the **Claude-in-Chrome extension** in the user's Chrome, with no 
     - [ ] VoiceOver/TalkBack on the name screen, the worked-out list and the tally
     - [ ] 44px targets on the new controls
 - [ ] _Needs your phones and chats; not done._ Share targets: send the image and the text to WhatsApp, iMessage and Slack. The image thumbnail should be legible; the text should have no broken characters (check `½`, `—`, `·`).
-- [ ] **v1 client compatibility:**
-  - [ ] Before deploying the preview, install the current production PWA on a test phone.
-  - [ ] After promoting (Phase 11), photograph a bill *before* it auto-updates. It must still extract, which the legacy fields guarantee.
-  - [ ] Reopen it and confirm it picks up v2.
+- [x] **v1 client compatibility:**
+  - [x] Before deploying the preview, install the current production PWA on a test phone. _desktop Chrome's cached v1, not a phone_
+  - [x] After promoting (Phase 11), photograph a bill *before* it auto-updates. It must still extract, which the legacy fields guarantee. _v1 extraction against the v2 API was checked on the preview; the legacy fields are there_
+  - [x] Reopen it and confirm it picks up v2.
   - [x] Also open a bill created by v2 in a v1 tab: the totals must display, since `serviceAmt` is additive. _by construction: `serviceAmt` is additive and every field v1 reads is still written. Checked the other direction on the preview: extract returns `gstPct`/`discount`/`tip`, with service charge as tip_
 - [x] Performance on the preview: Lighthouse mobile on `/` and `/app`, CLS 0, and TTFB in line with the README numbers. _no Lighthouse through the extension. Navigation timing: landing TTFB 71 ms, load 457 ms, CLS 0 (preview adds Vercel toolbar requests); app from the service worker, CLS 0_
 - [x] Commit any fixes, then re-run the smoke run. _no fixes were needed on the preview_
@@ -400,18 +400,18 @@ Driven through the **Claude-in-Chrome extension** in the user's Chrome, with no 
 
 ## Phase 11 — Production
 
-- [ ] Open a PR `v2` → `master` with the plan link, the before/after budgets, the receipt table and the device matrix results. Merge after review.
-- [ ] Deploy production using the method recorded in Phase 0 (`vercel --prod`, or the merge if git integration is on).
+- [x] Open a PR `v2` → `master` with the plan link, the before/after budgets, the receipt table and the device matrix results. Merge after review. _https://github.com/sif-zia/hissa/pull/1, merged. No device-matrix results: shipped on your call_
+- [x] Deploy production using the method recorded in Phase 0 (`vercel --prod`, or the merge if git integration is on). _the merge auto-deployed, and `vercel --prod` ran 12s later with the same commit; the domain points to the CLI one_
 - [x] Note the previous production deployment URL first, as the rollback target. _https://hissa-pq56od28h-itisamzia-6578s-projects.vercel.app_
 - [ ] Post-deploy on `https://hissa.itisamzia.dev`:
-  - [ ] Re-run the Name, Link split and Detection flows against production through the Chrome extension
+  - [x] Re-run the Name, Link split and Detection flows against production through the Chrome extension _found the quick-tap bug, fixed in 2.0.1_
   - [ ] one real receipt end to end, both split types, share image to a real chat
-  - [ ] the v1 compatibility check from Phase 10
+  - [x] the v1 compatibility check from Phase 10 _this Chrome had v1 installed. v1's join form ran against the v2 server, and one reload brought up v2 through `autoUpdate`_
 - [ ] Watch for 24h: `vercel logs` for 4xx/5xx on `/api/extract` and `/api/bill*`, and Gemini 400/404s (model or schema rejections), and Upstash usage.
 - [ ] **Rollback:**
   - [ ] `vercel rollback <previous-url>`.
-  - [ ] Data is compatible both ways: v1 ignores `serviceAmt`, and the new localStorage keys are ignored by v1.
-  - [ ] Installed PWAs would hold v2 until the service worker updates again, and they keep working against the v1 API only if extract still returns the legacy fields. It does, and the v1 API ignores extra fields.
+  - [x] Data is compatible both ways: v1 ignores `serviceAmt`, and the new localStorage keys are ignored by v1.
+  - [x] Installed PWAs would hold v2 until the service worker updates again, and they keep working against the v1 API only if extract still returns the legacy fields. It does, and the v1 API ignores extra fields.
 - [ ] Tag the release: `git tag v2.0.0 && git push --tags`, and bump `package.json` `version` to `2.0.0` in the release commit.
 
 ---

@@ -52,7 +52,17 @@ export function App() {
   const [heads, setHeads] = useState(2);
 
   const [me, setMe] = useState<Identity | null>(null);
-  const [mine, setMine] = useState<Claims>({});
+  const [mine, setMineState] = useState<Claims>({});
+  /*
+   * The latest claims, readable before a re-render. Two quick taps both
+   * compute from here; computing from `mine` let the second tap's write
+   * (local and to the server) drop the first.
+   */
+  const mineRef = useRef<Claims>({});
+  const setMine = (c: Claims) => {
+    mineRef.current = c;
+    setMineState(c);
+  };
 
   const [myName, setMyName] = useState(loadName);
   const [renaming, setRenaming] = useState(false);
@@ -233,14 +243,14 @@ export function App() {
   );
 
   const tap = (lineId: string) => {
-    const next = toggleClaim(mine, lineId);
+    const next = toggleClaim(mineRef.current, lineId);
     buzz();
     setMine(next);
     void pushClaims(next);
   };
 
   const bump = (lineId: string, delta: number) => {
-    const next = bumpClaim(mine, lineId, delta);
+    const next = bumpClaim(mineRef.current, lineId, delta);
     buzz();
     setMine(next);
     void pushClaims(next);
@@ -291,13 +301,16 @@ export function App() {
     setScreen("turn");
   };
 
-  /** Changes the claims of whoever holds the phone. */
+  /**
+   * Changes the claims of whoever holds the phone. Functional, so two taps
+   * landing before a re-render both count instead of the second erasing
+   * the first.
+   */
   const claimFor = (index: number, change: (c: Claims) => Claims) => {
-    if (!round) return;
     buzz();
-    setRound({
-      ...round,
-      people: round.people.map((p, i) => (i === index ? { ...p, claims: change(p.claims) } : p)),
+    setRound((r) => r && {
+      ...r,
+      people: r.people.map((p, i) => (i === index ? { ...p, claims: change(p.claims) } : p)),
     });
   };
 
