@@ -64,6 +64,11 @@ describe("landing redirect", () => {
 });
 
 describe("service worker navigation", () => {
+  it("serves the app shell for / when offline, instead of the browser's error page", () => {
+    const cfg = readFileSync("vite.config.ts", "utf8");
+    expect(cfg).toMatch(/url\.pathname === "\/"[\s\S]{0,80}handler: "NetworkFirst"[\s\S]{0,160}precacheFallback: \{ fallbackURL: "app\.html" \}/);
+  });
+
   it("lets /?about through to the network instead of the app shell", () => {
     const cfg = readFileSync("vite.config.ts", "utf8");
     const m = cfg.match(/navigateFallbackDenylist: \[(\/.*?\/),/);

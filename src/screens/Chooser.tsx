@@ -7,8 +7,10 @@ import { tiltStyle } from "../lib/tilt";
  * just pick a card.
  */
 export function Chooser({
-  billName, setBillName, fallback, onLink, onPhone, onBack, busy, error,
+  billName, setBillName, fallback, onLink, onPhone, onBack, busy, error, online,
 }: {
+  /** A shared link needs the server; pass the phone doesn't. */
+  online: boolean;
   billName: string;
   setBillName: (v: string) => void;
   /** What an emptied field turns into. */
@@ -37,11 +39,11 @@ export function Chooser({
       />
 
       <div class="stack-lg" style={{ marginTop: 30 }}>
-        <button class="choice" style={tiltStyle("ch-link", "card")} onClick={onLink} disabled={busy}>
+        <button class="choice" style={tiltStyle("ch-link", "card")} onClick={onLink} disabled={busy || !online}>
           <b>{busy ? "opening…" : "share the link"}</b>
           <span class="dim small">everyone taps on their own phone</span>
-          <span class="scrawl" style={{ display: "block", color: "var(--rose)", marginTop: 4 }}>
-            recommended for 5 or more
+          <span class="scrawl" style={{ display: "block", color: online ? "var(--rose)" : "var(--warn)", marginTop: 4 }}>
+            {online ? "recommended for 5 or more" : "needs the internet → you're offline"}
           </span>
         </button>
         <button class="choice" style={tiltStyle("ch-phone", "card")} onClick={onPhone} disabled={busy}>

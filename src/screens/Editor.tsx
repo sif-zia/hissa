@@ -13,8 +13,10 @@ import { tiltStyle } from "../lib/tilt";
  * filled. Spec §2.4.
  */
 export function Editor({
-  bill, setBill, onEqual, onStart, onBack, suspect,
+  bill, setBill, onEqual, onStart, onBack, suspect, error,
 }: {
+  /** Why the lines arrived empty, when a read failed. */
+  error?: string;
   bill: DraftBill;
   setBill: (b: DraftBill) => void;
   onEqual: () => void;
@@ -50,6 +52,7 @@ export function Editor({
         title="what's on it"
         note="fix anything that looks wrong. one wrong digit is a real argument later."
         onBack={onBack}
+        error={error}
       />
 
       {suspect ? (

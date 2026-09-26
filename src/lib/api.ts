@@ -14,6 +14,18 @@ export class ApiError extends Error {
   }
 }
 
+/** Status of an ApiError that never reached the server. */
+export const OFFLINE = 0;
+
+/** fetch() rejects only when there is no answer at all: no network. */
+async function call(url: string, init?: RequestInit): Promise<Response> {
+  try {
+    return await fetch(url, init);
+  } catch {
+    throw new ApiError("You're offline.", OFFLINE);
+  }
+}
+
 async function jsonOrThrow(res: Response): Promise<unknown> {
   if (res.ok) return res.json();
   let msg = `Request failed (${res.status})`;
@@ -37,7 +49,7 @@ export interface Unchanged {
 
 /** `304 Not Modified` short-circuits with no state change at all. */
 export async function fetchBill(code: string, etag?: string): Promise<Fresh | Unchanged> {
-  const res = await fetch(`/api/bill/${encodeURIComponent(code)}`, {
+  const res = await call(`/api/bill/${encodeURIComponent(code)}`, {
     headers: etag ? { "If-None-Match": etag } : {},
   });
   if (res.status === 304) return { changed: false };
@@ -61,7 +73,7 @@ export interface CreateInput {
 }
 
 export async function createBill(input: CreateInput): Promise<BillState & { etag: string }> {
-  const res = await fetch("/api/bill", {
+  const res = await call("/api/bill", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(input),
@@ -76,7 +88,7 @@ export async function putClaims(
   who: { name: string; slug: string },
   claims: Claims,
 ): Promise<void> {
-  const res = await fetch(`/api/bill/${encodeURIComponent(code)}/claims`, {
+  const res = await call(`/api/bill/${encodeURIComponent(code)}/claims`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ ...who, claims }),
@@ -86,7 +98,7 @@ export async function putClaims(
 
 /** The one field of the frozen bill any member may change. */
 export async function setSplitUnclaimed(code: string, splitUnclaimed: boolean): Promise<void> {
-  const res = await fetch(`/api/bill/${encodeURIComponent(code)}/meta`, {
+  const res = await call(`/api/bill/${encodeURIComponent(code)}/meta`, {
     method: "PATCH",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ splitUnclaimed }),
@@ -107,7 +119,7 @@ export interface Extracted {
 }
 
 export async function extract(base64: string): Promise<Extracted> {
-  const res = await fetch("/api/extract", {
+  const res = await call("/api/extract", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ image: base64 }),
