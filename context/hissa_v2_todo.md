@@ -1,0 +1,431 @@
+# Hissa v2 — shipping checklist
+
+The execution list for `hissa_v2_plan.md`. Section numbers (§) refer to that plan. Work top to bottom: each phase leaves the app working and ends with green tests and a commit. Tick boxes as you go.
+
+**Standing rules for every phase** (from CLAUDE.md, the ones most likely to be broken):
+- Money stays integer minor units. Floats only at parse time.
+- Never write another member's storage key.
+- Nothing prefixed `VITE_`.
+- Every amount uses `.amt`.
+- Screens compose from `journal.css`, never inventing a colour, shadow or rotation.
+- Everything flattens under `prefers-reduced-motion`.
+- No new runtime dependencies. Check bundle size at the end of each phase.
+
+---
+
+## Phase 0 — Prep
+
+- [ ] Branch `v2` from `master`.
+- [ ] Baseline, and write the numbers down in the PR description:
+  - [ ] `pnpm test` is green (79 tests).
+  - [ ] `pnpm build` passes.
+  - [ ] Gzipped size of the app JS chunk(s) and of the landing HTML+CSS: `gzip -c dist/assets/*.js | wc -c` per file.
+- [ ] Vercel: `vercel env ls` shows `GEMINI_API_KEY` and the Upstash URL/token (`UPSTASH_REDIS_REST_*` or `KV_REST_API_*`; `api/_lib/redis.ts` accepts either) for **Preview** as well as Production. Add any that are missing, or preview deploys can't be tested end to end.
+- [ ] Font glyph check (§11). Confirm `½ ⅓ ¼ ⅔ ¾ ✓ ● ⚡` exist in `public/fonts/hissa-ledger*.woff2` and `hissa-scrawl.woff2`.
+  - [ ] If they're missing, either add them via `tools/fonts.sh`, keeping the fonts total ≤ 64 KB (it's already over the 45 KB target; don't grow it), or plan to fall back to `1/2` and canvas paths. Record which.
+- [ ] Receipt set for extraction checks: 8–10 real bill photos in a **gitignored** folder (`tools/receipts/`, added to `.gitignore`; photos are never committed). For each, note the printed subtotal, total and the true arrangement. Cover at least:
+  - [ ] GST only
+  - [ ] GST + service charge
+  - [ ] discount before tax
+  - [ ] discount after tax
+  - [ ] a flat discount
+  - [ ] a printed tip
+  - [ ] no tax at all
+  - [ ] a long bill (20+ lines)
+  - [ ] a crumpled or low-light photo
+- [ ] Decide how production deploys happen (git integration vs `vercel --prod`) by checking the project's Git settings in the dashboard. Record it here: `____`.
+
+---
+
+## Phase 1 — Identity and entry (§1, §2, §4)
+
+### Code
+- [ ] `src/lib/cache.ts`: `loadName()` / `saveName()` on `hissa:name`, a JSON string with **no `at`**.
+- [ ] New `src/screens/Name.tsx`, entry no. 00 "who's this?":
+  - [ ] one `Write` field, `maxLength={24}`, `autoComplete="given-name"`, autofocus
+  - [ ] a `that's me →` button, disabled while the field is blank
+  - [ ] a back arrow only when changing an existing name
+- [ ] `App.tsx`: no stored name → render `Name` before anything, **including on `/s/CODE`**. After saving, carry on to where the user was going: home, or the join for that code.
+- [ ] `Home.tsx`:
+  - [ ] header line `hi {name} · not you?`, where `not you?` opens `Name` prefilled
+  - [ ] a quiet `how it works →` link to `/?about`
+- [ ] `/s/CODE` with a stored name and no `hissa:me:CODE`: run the existing `doJoin` logic with the stored name (read before write, same `adopted` ref handling). No join form.
+- [ ] `Join.tsx` (from home): remove the name field, so it asks for the code only and uses the stored name.
+- [ ] `not {name}?` on the split is unchanged: it changes only that split's identity, not `hissa:name`.
+- [ ] `index.html` inline head script: the redirect line from §2, inside the existing `try`, targeting **`/app`**. Leave `how-it-works.html` alone.
+- [ ] Labels:
+  - [ ] `src/screens/Split.tsx:157`: `learned →` → `fyi →`
+  - [ ] `how-it-works.html:129`: `data-label="learned"` → `data-label="note"`
+
+### Unit tests
+- [ ] `hissa:name`, `hissa:steps` and `hissa:withItems` survive `sweep()` with the clock moved forward 25h. Stub `localStorage` and `Date.now`.
+- [ ] `hissa:round` **is** swept after 24h.
+- [ ] Reading `index.html` as text: the redirect targets `/app` (not `/app.html`), checks `about`, and sits inside a `try`.
+- [ ] If the join logic moves out of `App.tsx`, keep a test that joining with an existing record does **not** write empty claims (regression: "Joining wiped your claims").
+
+### Manual check (`pnpm dev`)
+- [ ] Fresh profile: `/app.html` → name screen → home shows `hi …`. Reload: no ask.
+- [ ] Change name via `not you?`. The new name shows. Open splits keep their old identity.
+- [ ] `/` with a name → lands on the app. `/?about` stays on the landing page. Without a name, `/` stays on the landing page.
+
+- [ ] Commit: "Ask for a name once; skip the landing for returning users".
+
+---
+
+## Phase 2 — Steps maths (§3.1–3.4, pure `src/lib/money.ts`)
+
+### Code
+- [ ] Types: `Kind`, `Steps`, and `adj: Record<Kind, { mode: AmountMode; val: string }>` on `DraftBill` in place of `gst` / `discount` / `tip`. GST mode is fixed to `pct`. Add `steps: Steps` and `printedTotal?: number` (minor units).
+- [ ] `active(bill)`: the kinds with a value above 0.
+- [ ] `normalise(steps, active)`: drop inactive kinds and empty groups, and put a newly active kind where the remembered steps place it, else in the last group.
+- [ ] `apply(subtotal, adj, steps)`: returns per-kind `{ amt, base }`, clamps the total at ≥ 0, and rounds per row.
+- [ ] `compute(bill)` goes through `apply`. `Totals` gains `serviceAmt` and `bases`.
+- [ ] `arrangements(kinds)`: every ordered set partition (1, 3, 13 and 75 for 1–4 kinds).
+- [ ] `outcomes(bill, printedTotal?)`:
+  - [ ] Enumerate, compute each total, and dedupe by total. The representative is the one with the fewest groups, ties broken by canonical kind order (service, gst, discount, tip).
+  - [ ] Rank: bill match (within 100 minor units) first, then the current arrangement, then fewest groups.
+  - [ ] Return `{ visible: max 4, more: rest }`.
+- [ ] `sentence(steps, adj)`:
+  - [ ] one group → `all on the food`
+  - [ ] otherwise `{g1} on the food, then {g2}, then {g3}`, with names joined by ` & `
+  - [ ] all groups of one → `one after another`, adding `: a → b → c` only when a flat row makes the order matter
+- [ ] `detect(bill, llmSteps, printedTotal)`: the three-step rule from §3.3. Returns `{ steps, matched: boolean }`.
+- [ ] Default steps: `[["service","gst"],["discount","tip"]]`.
+
+### Unit tests (`tests/money.test.ts`, extend it)
+- [ ] **Every existing compute case passes unchanged** under the default steps. This is the regression net for today's rule.
+- [ ] All on the subtotal: 3000 + 16% gst + 10% discount + 5% tip = 3330.
+- [ ] Gst first, then discount & tip = 3306.
+- [ ] One after another gives the same total regardless of order when all rows are %.
+- [ ] A flat discount makes order matter: two arrangements give different totals.
+- [ ] Three % rows → exactly 5 distinct outcomes. Four % rows → `visible.length === 4` and `more.length > 0`.
+- [ ] 0 or 1 active rows, or only flat amounts → one outcome, so the UI line hides.
+- [ ] `normalise` drops empty groups and places a newly filled kind correctly.
+- [ ] `detect`:
+  - [ ] accepts the LLM's steps within Rs 1
+  - [ ] finds the right arrangement when the LLM is wrong
+  - [ ] returns `matched: false` with the LLM's steps when nothing fits
+  - [ ] uses the LLM's steps when there's no printed total
+- [ ] A discount above the running total clamps the total to 0.
+- [ ] All results are integers (no float leaks): assert `Number.isInteger` on every amount.
+- [ ] `sentence` output for each shape above.
+
+- [ ] Commit: "Model tax, discount, tip and service as steps".
+
+---
+
+## Phase 3 — Editor and extraction (§3.2, §3.3, §8)
+
+### API (`api/extract.ts`)
+- [ ] Schema: `adjustments[{ kind (enum), pct, amount, step }]`, `printedTotal`, `place`, keeping `printedSubtotal`.
+- [ ] Prompt additions:
+  - [ ] step semantics
+  - [ ] a service charge is its own kind, never a tip
+  - [ ] a tip only if one is printed
+  - [ ] `place` = the business name from the header, or ""
+- [ ] Clamp and validate:
+  - [ ] kind in the enum, max one of each
+  - [ ] `step` 1–4
+  - [ ] pct 0–100
+  - [ ] amounts finite and ≥ 0
+  - [ ] `place` ≤ 40 characters
+- [ ] **Keep `gstPct`, `discount` and `tip` in the response**, derived from `adjustments`, for installed v1 clients (§8). Add a `TODO(v2+1w)` comment to remove them.
+- [ ] `suspect` is unchanged.
+
+### API (`api/bill/index.ts`, `api/_lib/bill.ts`)
+- [ ] Accept and clamp `serviceAmt`, and store it on the meta.
+- [ ] `billName` fallback becomes `"the bill"` (drop `randCode(3)`).
+- [ ] `gstPct`: `clampInt` rounds 17.5 → 18. It's display-only, but store it rounded to 2 decimals instead.
+- [ ] `src/lib/split.ts` `BillMeta`: `serviceAmt?: number`, read as `?? 0`.
+
+### Client
+- [ ] `src/lib/api.ts` `extract()` types for the new response.
+- [ ] `App.tsx` `readShot`: build `adj` from `adjustments`, pick the mode (pct if > 0, else flat amount), run `detect()`, and set `suspect` (a new `stepsMismatch` flag) and `printedTotal`.
+- [ ] `blank()`: `adj` empty, `steps` from `hissa:steps` or the default.
+- [ ] `Editor.tsx`:
+  - [ ] Rows in fixed order: service (hidden unless active or added via `+ service charge`), gst %, discount flat/%, tip flat/%.
+  - [ ] Totals sticky: each % row shows `N% of {base}` when its base differs from the subtotal.
+  - [ ] The `worked out: … ▾` line, only when `outcomes` has 2 or more entries.
+  - [ ] Its inline radio list: 44px rows, sentence plus `.amt` total, `✓ bill` on the match, and `more ways (n)` expanding the rest. Picking one sets `steps` and closes the list.
+  - [ ] `the bill says Rs X ✓` under the total when `printedTotal` is known.
+  - [ ] `heads up` sticky text for a steps mismatch (§3.3 step 3), separate from the subtotal mismatch.
+  - [ ] Radio semantics: `role="radiogroup"` / `aria-checked`, reachable by keyboard.
+- [ ] Save `hissa:steps` when a bill leaves the editor for any split (link, pass the phone, equal).
+
+### Unit tests
+- [ ] `tests/validation.test.ts`: the extract clamping (bad kind dropped, duplicate kinds dropped, step clamped, legacy fields present and consistent).
+- [ ] `serviceAmt` clamp, and the `"the bill"` fallback.
+
+### Manual check
+- [ ] Manual bill: fill gst only → no line. Add a % discount → the line appears with 2 options. Pick one → the total and `of {base}` update. Next manual bill starts with that arrangement.
+- [ ] `vercel dev` with a real key: run 3 receipts from the set and check detection plus `✓ bill`.
+
+- [ ] Commit: "Detect and choose how extras stack; read service charge".
+
+---
+
+## Phase 4 — Chooser and bill name (§5)
+
+- [ ] `src/lib/names.ts` (or inside `money.ts` if it stays tiny): `dayMeal(date)` → `saturday dinner`. Buckets: breakfast 05–11, lunch 11–16, chai 16–19, dinner 19–05.
+- [ ] Replace `Start.tsx` with `Chooser.tsx`, entry no. 06 "how are you splitting?":
+  - [ ] `what was it` field, prefilled with `place || dayMeal(now)`; cleared means the fallback
+  - [ ] two `.choice` cards: `share the link` (everyone taps on their own phone · recommended for 5 or more) and `pass the phone` (one phone goes round the table · recommended for under 5)
+- [ ] `openSplit`: host comes from `hissa:name`, and the bill name is always sent.
+- [ ] Remove `hostName` state and any Start leftovers from `App.tsx`.
+- [ ] Test: `dayMeal` at the bucket edges (04:59, 05:00, 10:59, 11:00, 15:59, 16:00, 18:59, 19:00, 23:59).
+- [ ] Commit: "One chooser after the editor; name bills after the place".
+
+---
+
+## Phase 5 — Pass the phone (§6)
+
+### Code
+- [ ] Extract `ItemList` (rows, chips, the `×N` stepper on the active person) from `Split.tsx` into `src/ui.tsx` or `src/screens/ItemList.tsx`, then **rewire `Split.tsx` to it first**. The live split must look and behave identically before going further.
+- [ ] `src/lib/round.ts`:
+  - [ ] `Round = { meta: BillMeta; people: Person[]; turn: number | "tally"; splitUnclaimed: boolean; at }`
+  - [ ] `loadRound()` / `saveRound()` / `clearRound()` on `hissa:round`
+  - [ ] `dupes(names)` → indices whose normalised names collide
+- [ ] `Table.tsx`, entry no. 07 "who's at the table":
+  - [ ] the stepper and inputs are one list, minimum 1, no maximum
+  - [ ] row 1 prefilled with the stored name
+  - [ ] `+` appends an input and focuses it; Enter moves to the next input or appends one
+  - [ ] `−` removes the last input
+  - [ ] every name is required
+  - [ ] duplicates get the inline scrawl `two saras → add an initial` and block start
+  - [ ] the button reads `start → {first} goes first`
+- [ ] `Turn.tsx`, entry no. 08:
+  - [ ] handoff card `it's {name}'s turn` / `pass the phone to {name}` / `[ i'm {name} → ]` for everyone except person 1
+  - [ ] then `ItemList`, with earlier people's chips read-only
+  - [ ] bar: `{name}'s hissa Rs X` + `done → pass to {next}`; for the last person, `done → see the tally`
+  - [ ] back goes to the previous turn, or to entry 07 from person 1, keeping names and claims
+- [ ] `Tally.tsx`, entry no. 09:
+  - [ ] `who owes what` with palette dots
+  - [ ] `nobody's claimed` + `share leftovers` toggle
+  - [ ] `tap a name to redo their turn`, which reopens that turn with no handoff card and a bar reading `done → back to the tally`
+  - [ ] share block (Phase 6)
+- [ ] Save the round on every tap and every step.
+- [ ] Home: one stub `{billName} · {name}'s turn →` / `· tally →` next to `still open`, which resumes.
+- [ ] Starting a new round replaces the old one. Leaving the tally keeps the round until it's swept, so it can be re-shared.
+- [ ] Changing the table (entry 07) after claims exist: removing a person drops their claims, and renaming keeps them. Index people by position while on entry 07 and re-key on start.
+
+### Unit tests
+- [ ] `dupes`: case, whitespace, and three-way collisions.
+- [ ] The tally equals `spread` + `shareOf` for fixed claims, and Σ shares = total when nothing's loose and leftovers are off (±n minor units of rounding, bounded by the number of people; assert that bound).
+- [ ] Leftovers on, with one person claiming nothing: that person pays 0.
+- [ ] `loadRound` on corrupt JSON returns null.
+
+### Manual check
+- [ ] 3 people, including a shared plate with ×2 portions. Redo person 2. Reload mid-turn, resume from the home stub, and land on the same turn.
+
+- [ ] Commit: "Pass the phone".
+
+---
+
+## Phase 6 — Sharing (§7)
+
+### Code
+- [ ] `spread()` also returns `cuts: Record<lineId, Record<key, number>>` (it already computes them; don't recompute elsewhere).
+- [ ] `src/lib/summary.ts`:
+  - [ ] `summary(meta, people, { withItems, splitUnclaimed })` → `{ title, date, rows: [{ name, colour, amt, items?: [{ name, frac, amt }] }], total, loose }`
+  - [ ] `fraction(portions, units)` → `½ ⅓ ¼ ⅔ ¾`, else `a/b`, else "" for whole
+  - [ ] `text(summary)` → the plain-lines format from §7
+  - [ ] `equalText(total, n, cur)`
+- [ ] `src/lib/card.ts`:
+  - [ ] `drawCard(summary)` → `Promise<Blob>`: canvas 1080 wide, height from rows, **light palette constants** (not CSS variables, so the viewer's theme can't leak in)
+  - [ ] await `document.fonts.load()` for all three faces first
+  - [ ] dashed rule, dots, `split with hissa` footer
+- [ ] `src/lib/share.ts`:
+  - [ ] `shareImage(blob, text, filename)`: `navigator.canShare({ files })` → `navigator.share`, otherwise an `<a download>` fallback, with `AbortError` treated as nothing happening (as in the existing `share()`)
+  - [ ] `copy` reused for text
+- [ ] `ShareBlock` component:
+  - [ ] a `with items` toggle (hidden for equal split), persisted in `hissa:withItems`
+  - [ ] `share as image` and `copy` buttons
+  - [ ] toasts: `copied`, `shared`, `saved`
+  - [ ] **pre-render the PNG** in an effect keyed on the summary and toggle (debounced ~300ms), so the tap never awaits fonts or `toBlob` (the iOS user-activation rule)
+- [ ] Place it on:
+  - [ ] `EqualSplit.tsx`, under the number
+  - [ ] `Tally.tsx`
+  - [ ] `Split.tsx`, under `who owes what`, with `nobody's claimed Rs X` in the output when above 0
+
+### Unit tests
+- [ ] `text()` with and without items, with leftovers shared and with some unclaimed.
+- [ ] `fraction`: 1/2 → ½, 2/4 → ½, 2/5 → `2/5`, 3/3 → "".
+- [ ] `equalText` for even and uneven splits.
+- [ ] The amounts in `text()` equal `shareOf` for each person (no second maths path).
+
+- [ ] Commit: "Share the result as text or an image".
+
+---
+
+## Phase 7 — Full-screen camera (§7a)
+
+### Code
+- [ ] `useCamera`:
+  - [ ] after play, read `track.getCapabilities?.()` on `loadedmetadata` and again ~500ms later
+  - [ ] expose `caps: { focus: boolean; torch: boolean }`
+  - [ ] `focusAt(x, y)`: `single-shot` + `pointsOfInterest`, back to `continuous` after 3s, each wrapped in try/catch
+  - [ ] `setTorch(on)`
+  - [ ] `stop()` still runs on every exit path
+- [ ] `src/lib/image.ts` (or a new helper): `frameCoords(tap, rect, videoW, videoH)` mapping a tap through the `object-fit: cover` crop to 0–1 frame coordinates.
+- [ ] `Capture.tsx` live state:
+  - [ ] a `.cam` fixed layer with safe-area padding and body scroll locked
+  - [ ] top: `✕` stub (back) and a flash stub **only if** `caps.torch` (`aria-pressed`)
+  - [ ] SVG pencil corner marks
+  - [ ] a taped scrawl note that fades after ~1.5s
+  - [ ] a focus ring at the tap point on every tap on the video; `focusAt` only if `caps.focus`
+  - [ ] bottom: `upload` stub (the existing file input) and the paper shutter
+  - [ ] errors as a sticky over the video
+  - [ ] hide the theme toggle and page head on this screen
+- [ ] Blocked states (denied, unavailable) keep the current sheet layout.
+- [ ] `journal.css`: `.cam`, corner marks, focus ring, and the note fade, all from existing tokens. Under `prefers-reduced-motion`: no fade and no ring animation.
+
+### Unit tests
+- [ ] `frameCoords`: a portrait element over a landscape frame, a landscape element over a portrait frame, a tap at the centre → (0.5, 0.5), taps at the corners stay within 0–1.
+
+### Manual check
+- [ ] Android Chrome: flash toggles the torch, and tap-to-focus visibly refocuses on a near object.
+- [ ] iPhone Safari: no flash stub if unsupported, the ring shows, no fullscreen-video takeover, and the camera indicator goes off after leaving.
+
+- [ ] Commit: "Full-screen camera with focus and flash".
+
+---
+
+## Phase 8 — End-to-end tests
+
+Playwright as a **dev** dependency only; it never reaches the bundle.
+
+### Setup
+- [ ] `pnpm add -D @playwright/test` and `pnpm exec playwright install chromium webkit`.
+- [ ] `playwright.config.ts`:
+  - [ ] `testDir: "e2e"`, files `*.spec.ts` (vitest only picks up `tests/**/*.test.ts`, so there's no overlap)
+  - [ ] `webServer: pnpm dev` (the dev server handles `/s/CODE` through the `deepLinks` middleware; `vite preview` doesn't)
+  - [ ] Projects:
+    - [ ] `mobile-chrome` (Pixel 7), with `--use-fake-ui-for-media-stream --use-fake-device-for-media-stream` and camera permission granted
+    - [ ] `mobile-safari` (iPhone 14, WebKit), which has no fake camera, so this project covers the fallback path
+    - [ ] `smoke`, using `E2E_BASE_URL` against a real deployment, only running specs tagged `@smoke`
+- [ ] `e2e/fake-api.ts`: `page.route("**/api/**")` backed by an in-memory store shared across browser contexts in one test.
+  - [ ] Covers `POST /api/bill`, `GET /api/bill/:code` (ETag / 304), `PUT …/claims` and `PUT …/meta`.
+  - [ ] Covers `POST /api/extract`, returning canned responses per test, so no Gemini spend.
+- [ ] `e2e/helpers.ts`: `withName(page, name)` seeds `hissa:name`, `enterBill(page, lines, extras)`, and `readClipboard(page)` (Chromium permission).
+- [ ] `package.json`: `"e2e": "playwright test"`, `"e2e:smoke": "playwright test --project=smoke"`.
+- [ ] `.gitignore`: `test-results/`, `playwright-report/`.
+
+### Specs
+- [ ] `name.spec.ts`: first visit asks; reload doesn't; `not you?` changes it; a `/s/CODE` link without a name asks first, then joins.
+- [ ] `landing.spec.ts`: no name → landing page; with a name → `/app`; `/?about` stays; `/how-it-works` never redirects.
+- [ ] `extras.spec.ts`:
+  - [ ] the manual bill line shows and hides at the right times
+  - [ ] picking an option changes the total and the `of {base}` labels
+  - [ ] the arrangement is remembered for the next manual bill
+  - [ ] `+ service charge` shows the row
+- [ ] `detect.spec.ts` (mocked extract):
+  - [ ] matching printed total → `✓ bill` and no warning
+  - [ ] LLM steps wrong but another arrangement matches → corrected, with `✓`
+  - [ ] nothing matches → `heads up` sticky
+  - [ ] `place` prefills the chooser
+- [ ] `chooser.spec.ts`: prefill from `place`; without it, day + meal (freeze the clock with `page.clock`); both cards route correctly.
+- [ ] `pass-the-phone.spec.ts`:
+  - [ ] 3 people; a duplicate name blocks start
+  - [ ] handoff cards for persons 2 and 3 only
+  - [ ] earlier chips visible on later turns
+  - [ ] the tally sum equals the bill total
+  - [ ] redo person 2 and the tally updates
+  - [ ] the leftovers toggle
+- [ ] `resume.spec.ts`: reload mid-round → the home stub → the same turn; the round is gone after the clock moves 25h.
+- [ ] `share.spec.ts`:
+  - [ ] copy text with and without items (clipboard); the toggle survives a reload
+  - [ ] `share as image`: with `navigator.share` stubbed via `addInitScript` to capture `files`, assert one `image/png` above 10 KB; with `share` removed, assert a download event
+  - [ ] equal-split text
+- [ ] `link-split.spec.ts` (two browser contexts, fake API): the host opens a split; a guest context with a stored name opens `/s/CODE` and is auto-joined with no form; the guest's tap appears for the host after a poll; the snapshot share includes `nobody's claimed` when above 0.
+- [ ] `camera.spec.ts`:
+  - [ ] chromium: the `.cam` layer fills the viewport; the shutter → preview; no flash stub on the fake device; a tap on the video draws the ring; `✕` returns home
+  - [ ] webkit: the fallback button is present
+- [ ] `motion.spec.ts`: with `reducedMotion: "reduce"`, the camera note and focus ring don't animate (computed `animation-name: none`).
+- [ ] Tag `@smoke`: `name`, `link-split` (real API), and one `detect` run with a **real** receipt upload (the file input path, skipped unless `E2E_RECEIPT` is set).
+
+### Gate
+- [ ] `pnpm test && pnpm e2e` are green locally on both projects.
+- [ ] Commit: "End-to-end tests for v2".
+
+---
+
+## Phase 9 — Docs
+
+- [ ] `CLAUDE.md`:
+  - [ ] Rewrite "Order of operations at bill level" as the steps rule, with the default arrangement.
+  - [ ] Screens: name → home → capture → preview → editor → (equal | chooser → link split | table → turns → tally), plus join.
+  - [ ] Update the test count, and add the `pnpm e2e` commands.
+  - [ ] Add to "Things that bit": the `sweep()` vs un-`at`ed keys issue, and pre-rendering the PNG for iOS share, if either actually bit.
+  - [ ] Add the new localStorage keys under the invariants.
+  - [ ] Update the budget line with measured numbers.
+- [ ] `README.md`: screens, budgets table, the e2e section, and `GEMINI_MODEL` unchanged.
+- [ ] `context/hissa_spec.md`: a one-line pointer at §3.1 to `hissa_v2_plan.md` §3 (don't rewrite the spec).
+- [ ] `index.html` / `how-it-works.html` copy: mention pass the phone and sharing in "how it goes", and update the JSON-LD `featureList`. The landing page stays zero-JS apart from the inline head script.
+- [ ] Commit: "Document v2".
+
+---
+
+## Phase 10 — Preview deployment and verification
+
+- [ ] `pnpm build` passes, and `tsc -b` is clean.
+- [ ] Budget check against the Phase 0 baseline:
+  - [ ] app JS ≤ 25 KB gz (estimate 23–25)
+  - [ ] landing critical path unchanged apart from one inline line
+  - [ ] fonts ≤ 64 KB
+  - [ ] **no new runtime dependencies** in `package.json`
+- [ ] `vercel` (preview) from the `v2` branch, and note the URL.
+- [ ] If Deployment Protection blocks automation, use a bypass token for the smoke run rather than turning protection off.
+- [ ] **Routing, verified on the deployment and not on `vercel dev`** (CLAUDE.md):
+  - [ ] `/s/CODE` rewrite
+  - [ ] `/app.html` → `/app` 308
+  - [ ] `/` redirect with a name
+  - [ ] `/?about`
+  - [ ] `/how-it-works`
+  - [ ] `noindex` still on the app, and canonical and OG still correct on `/`
+- [ ] `E2E_BASE_URL=<preview> pnpm e2e:smoke` is green.
+- [ ] Real extraction on the preview: run the full receipt set. Record per receipt the items, the subtotal flag, the detected arrangement, `✓ bill` yes/no, and `place`.
+  - [ ] **Bar: the arrangement is right on ≥ 8 of 10**, and the heads-up fires on every one that's wrong.
+  - [ ] Below the bar, tune the prompt, not the maths.
+- [ ] Device matrix, in the browser **and** as an installed PWA:
+  - [ ] iPhone Safari (the current iOS version and the one before)
+  - [ ] Android Chrome
+  - [ ] desktop Chrome, Safari and Firefox (share falls back to download, and the camera works on the webcam or falls back)
+  - [ ] Check on each:
+    - [ ] light and dark
+    - [ ] reduced motion
+    - [ ] VoiceOver/TalkBack on the name screen, the worked-out list and the tally
+    - [ ] 44px targets on the new controls
+- [ ] Share targets: send the image and the text to WhatsApp, iMessage and Slack. The image thumbnail should be legible; the text should have no broken characters (check `½`, `—`, `·`).
+- [ ] **v1 client compatibility:**
+  - [ ] Before deploying the preview, install the current production PWA on a test phone.
+  - [ ] After promoting (Phase 11), photograph a bill *before* it auto-updates. It must still extract, which the legacy fields guarantee.
+  - [ ] Reopen it and confirm it picks up v2.
+  - [ ] Also open a bill created by v2 in a v1 tab: the totals must display, since `serviceAmt` is additive.
+- [ ] Performance on the preview: Lighthouse mobile on `/` and `/app`, CLS 0, and TTFB in line with the README numbers.
+- [ ] Commit any fixes, then re-run the smoke run.
+
+---
+
+## Phase 11 — Production
+
+- [ ] Open a PR `v2` → `master` with the plan link, the before/after budgets, the receipt table and the device matrix results. Merge after review.
+- [ ] Deploy production using the method recorded in Phase 0 (`vercel --prod`, or the merge if git integration is on).
+- [ ] Note the previous production deployment URL first, as the rollback target.
+- [ ] Post-deploy on `https://hissa.itisamzia.dev`:
+  - [ ] `E2E_BASE_URL=https://hissa.itisamzia.dev pnpm e2e:smoke`
+  - [ ] one real receipt end to end, both split types, share image to a real chat
+  - [ ] the v1 compatibility check from Phase 10
+- [ ] Watch for 24h: `vercel logs` for 4xx/5xx on `/api/extract` and `/api/bill*`, and Gemini 400/404s (model or schema rejections), and Upstash usage.
+- [ ] **Rollback:**
+  - [ ] `vercel rollback <previous-url>`.
+  - [ ] Data is compatible both ways: v1 ignores `serviceAmt`, and the new localStorage keys are ignored by v1.
+  - [ ] Installed PWAs would hold v2 until the service worker updates again, and they keep working against the v1 API only if extract still returns the legacy fields. It does, and the v1 API ignores extra fields.
+- [ ] Tag the release: `git tag v2.0.0 && git push --tags`, and bump `package.json` `version` to `2.0.0` in the release commit.
+
+---
+
+## Follow-up (one week after release)
+
+- [ ] Remove the legacy `gstPct` / `discount` / `tip` fields from `/api/extract` (the `TODO(v2+1w)`), and update its validation test.
+- [ ] Review the extraction logs for arrangement mismatches reported via the heads-up, and adjust the prompt.
+- [ ] Revisit the fonts budget if glyphs were added in Phase 0.
