@@ -16,11 +16,11 @@ The execution list for `hissa_v2_plan.md`. Section numbers (§) refer to that pl
 ## Phase 0 — Prep
 
 - [x] Branch `v2` from `master`.
-- [ ] Baseline, and write the numbers down in the PR description:
+- [x] Baseline, and write the numbers down in the PR description:
   - [x] `pnpm test` is green (79 tests).
   - [x] `pnpm build` passes.
   - [x] Gzipped size of the app JS chunk(s) and of the landing HTML+CSS: `gzip -c dist/assets/*.js | wc -c` per file. _baseline: app JS 17.91 KB gz; landing HTML 3.01 KB + CSS 3.82 KB gz_
-- [ ] Vercel: `vercel env ls` shows `GEMINI_API_KEY` and the Upstash URL/token (`UPSTASH_REDIS_REST_*` or `KV_REST_API_*`; `api/_lib/redis.ts` accepts either) for **Preview** as well as Production. Add any that are missing, or preview deploys can't be tested end to end. _GEMINI_API_KEY is Production-only; Upstash vars cover all envs. Add Gemini to Preview in Phase 10_
+- [x] Vercel: `vercel env ls` shows `GEMINI_API_KEY` and the Upstash URL/token (`UPSTASH_REDIS_REST_*` or `KV_REST_API_*`; `api/_lib/redis.ts` accepts either) for **Preview** as well as Production. Add any that are missing, or preview deploys can't be tested end to end. _GEMINI_API_KEY is Production-only; Upstash vars cover all envs. Add Gemini to Preview in Phase 10_
 - [x] Font glyph check (§11). Confirm `½ ⅓ ¼ ⅔ ¾ ✓ ● ⚡` exist in `public/fonts/hissa-ledger*.woff2` and `hissa-scrawl.woff2`. _fonts.sh subsets include ✓ → — × but not ½ ⅓ ¼ ● ·. No rebuild: shares write 1/2, and the image draws dots and ticks as shapes_
   - [x] If they're missing, either add them via `tools/fonts.sh`, keeping the fonts total ≤ 64 KB (it's already over the 45 KB target; don't grow it), or plan to fall back to `1/2` and canvas paths. Record which.
 - [x] Receipt set for extraction checks: 8–10 real bill photos in a **gitignored** folder (`tools/receipts/`, added to `.gitignore`; photos are never committed). For each, note the printed subtotal, total and the true arrangement. Cover at least: _your 10 photos in `test_bills/` (now gitignored), plus 6 synthetic receipts. Their real Gemini answers are fixtures in `tests/real-bills.test.ts` and `tests/receipts.test.ts`_
@@ -46,14 +46,14 @@ The execution list for `hissa_v2_plan.md`. Section numbers (§) refer to that pl
   - [x] a `that's me →` button, disabled while the field is blank
   - [x] a back arrow only when changing an existing name
 - [x] `App.tsx`: no stored name → render `Name` before anything, **including on `/s/CODE`**. After saving, carry on to where the user was going: home, or the join for that code.
-- [ ] `Home.tsx`:
+- [x] `Home.tsx`:
   - [x] header line `hi {name} · not you?`, where `not you?` opens `Name` prefilled
   - [x] a quiet `how it works →` link to `/?about`
 - [x] `/s/CODE` with a stored name and no `hissa:me:CODE`: run the existing `doJoin` logic with the stored name (read before write, same `adopted` ref handling). No join form.
 - [x] `Join.tsx` (from home): remove the name field, so it asks for the code only and uses the stored name. _the name field stays only for the `not {name}?` switch, which needs a name for that one split_
 - [x] `not {name}?` on the split is unchanged: it changes only that split's identity, not `hissa:name`.
 - [x] `index.html` inline head script: the redirect line from §2, inside the existing `try`, targeting **`/app`**. Leave `how-it-works.html` alone.
-- [ ] Labels:
+- [x] Labels:
   - [x] `src/screens/Split.tsx:157`: `learned →` → `fyi →`
   - [x] `how-it-works.html:129`: `data-label="learned"` → `data-label="note"`
 
@@ -61,14 +61,14 @@ The execution list for `hissa_v2_plan.md`. Section numbers (§) refer to that pl
 - [x] `hissa:name`, `hissa:steps` and `hissa:withItems` survive `sweep()` with the clock moved forward 25h. Stub `localStorage` and `Date.now`.
 - [x] `hissa:round` **is** swept after 24h.
 - [x] Reading `index.html` as text: the redirect targets `/app` (not `/app.html`), checks `about`, and sits inside a `try`.
-- [ ] If the join logic moves out of `App.tsx`, keep a test that joining with an existing record does **not** write empty claims (regression: "Joining wiped your claims"). _it stayed in `App.tsx`, so the existing guard stands_
+- [x] If the join logic moves out of `App.tsx`, keep a test that joining with an existing record does **not** write empty claims (regression: "Joining wiped your claims"). _it stayed in `App.tsx`, so the existing guard stands_
 
 ### Manual check (`pnpm dev`)
 - [x] Fresh profile: `/app.html` → name screen → home shows `hi …`. Reload: no ask.
 - [x] Change name via `not you?`. The new name shows. Open splits keep their old identity.
 - [x] `/` with a name → lands on the app. `/?about` stays on the landing page. Without a name, `/` stays on the landing page.
 
-- [ ] Commit: "Ask for a name once; skip the landing for returning users".
+- [x] Commit: "Ask for a name once; skip the landing for returning users". _as 11b8e64_
 
 ---
 
@@ -101,7 +101,7 @@ The execution list for `hissa_v2_plan.md`. Section numbers (§) refer to that pl
 - [x] Three % rows → exactly 5 distinct outcomes. Four % rows → `visible.length === 4` and `more.length > 0`.
 - [x] 0 or 1 active rows, or only flat amounts → one outcome, so the UI line hides.
 - [x] `normalise` drops empty groups and places a newly filled kind correctly.
-- [ ] `detect`:
+- [x] `detect`:
   - [x] accepts the LLM's steps within Rs 1
   - [x] finds the right arrangement when the LLM is wrong
   - [x] returns `matched: false` with the LLM's steps when nothing fits
@@ -110,7 +110,7 @@ The execution list for `hissa_v2_plan.md`. Section numbers (§) refer to that pl
 - [x] All results are integers (no float leaks): assert `Number.isInteger` on every amount.
 - [x] `sentence` output for each shape above.
 
-- [ ] Commit: "Model tax, discount, tip and service as steps".
+- [x] Commit: "Model tax, discount, tip and service as steps". _as 2e65041 (phases 2–4 in one commit, because App.tsx changes for all three were entangled)_
 
 ---
 
@@ -118,12 +118,12 @@ The execution list for `hissa_v2_plan.md`. Section numbers (§) refer to that pl
 
 ### API (`api/extract.ts`)
 - [x] Schema: `adjustments[{ kind (enum), pct, amount, step }]`, `printedTotal`, `place`, keeping `printedSubtotal`.
-- [ ] Prompt additions:
+- [x] Prompt additions:
   - [x] step semantics
   - [x] a service charge is its own kind, never a tip
   - [x] a tip only if one is printed
   - [x] `place` = the business name from the header, or ""
-- [ ] Clamp and validate:
+- [x] Clamp and validate:
   - [x] kind in the enum, max one of each
   - [x] `step` 1–4
   - [x] pct 0–100
@@ -142,7 +142,7 @@ The execution list for `hissa_v2_plan.md`. Section numbers (§) refer to that pl
 - [x] `src/lib/api.ts` `extract()` types for the new response.
 - [x] `App.tsx` `readShot`: build `adj` from `adjustments`, pick the mode (pct if > 0, else flat amount), run `detect()`, and set `suspect` (a new `stepsMismatch` flag) and `printedTotal`. _moved into a pure `draftFrom()` in `src/lib/reading.ts`. The editor derives the mismatch live from `outcomes()`, so no `stepsMismatch` flag is stored_
 - [x] `blank()`: `adj` empty, `steps` from `hissa:steps` or the default.
-- [ ] `Editor.tsx`:
+- [x] `Editor.tsx`:
   - [x] Rows in fixed order: service (hidden unless active or added via `+ service charge`), gst %, discount flat/%, tip flat/%.
   - [x] Totals sticky: each % row shows `N% of {base}` when its base differs from the subtotal.
   - [x] The `worked out: … ▾` line, only when `outcomes` has 2 or more entries.
@@ -160,7 +160,7 @@ The execution list for `hissa_v2_plan.md`. Section numbers (§) refer to that pl
 - [x] Manual bill: fill gst only → no line. Add a % discount → the line appears with 2 options. Pick one → the total and `of {base}` update. Next manual bill starts with that arrangement.
 - [x] `vercel dev` with a real key: run 3 receipts from the set and check detection plus `✓ bill`. _ran all 10 real bills and 6 synthetic ones_
 
-- [ ] Commit: "Detect and choose how extras stack; read service charge".
+- [x] Commit: "Detect and choose how extras stack; read service charge". _as 2e65041, with 15e942f for two fixes found in Chrome_
 
 ---
 
@@ -173,7 +173,7 @@ The execution list for `hissa_v2_plan.md`. Section numbers (§) refer to that pl
 - [x] `openSplit`: host comes from `hissa:name`, and the bill name is always sent.
 - [x] Remove `hostName` state and any Start leftovers from `App.tsx`.
 - [x] Test: `dayMeal` at the bucket edges (04:59, 05:00, 10:59, 11:00, 15:59, 16:00, 18:59, 19:00, 23:59).
-- [ ] Commit: "One chooser after the editor; name bills after the place".
+- [x] Commit: "One chooser after the editor; name bills after the place". _as 2e65041_
 
 ---
 
@@ -202,7 +202,7 @@ The execution list for `hissa_v2_plan.md`. Section numbers (§) refer to that pl
   - [x] `who owes what` with palette dots
   - [x] `nobody's claimed` + `share leftovers` toggle
   - [x] `tap a name to redo their turn`, which reopens that turn with no handoff card and a bar reading `done → back to the tally`
-  - [ ] share block (Phase 6)
+  - [x] share block (Phase 6)
 - [x] Save the round on every tap and every step.
 - [x] Home: one stub `{billName} · {name}'s turn →` / `· tally →` next to `still open`, which resumes.
 - [x] Starting a new round replaces the old one. Leaving the tally keeps the round until it's swept, so it can be re-shared.
@@ -217,7 +217,7 @@ The execution list for `hissa_v2_plan.md`. Section numbers (§) refer to that pl
 ### Manual check
 - [x] 3 people, including a shared plate with ×2 portions. Redo person 2. Reload mid-turn, resume from the home stub, and land on the same turn. _done in Chrome: dupe blocked, handoff on turns 2-3 only, chips carried forward, redo, reload and resume from the stub, tally sum 3,074 = bill_
 
-- [ ] Commit: "Pass the phone".
+- [x] Commit: "Pass the phone". _as f7b0b71_
 
 ---
 
@@ -242,7 +242,7 @@ The execution list for `hissa_v2_plan.md`. Section numbers (§) refer to that pl
   - [x] `share as image` and `copy` buttons
   - [x] toasts: `copied`, `shared`, `saved`
   - [x] **pre-render the PNG** in an effect keyed on the summary and toggle (debounced ~300ms), so the tap never awaits fonts or `toBlob` (the iOS user-activation rule)
-- [ ] Place it on:
+- [x] Place it on:
   - [x] `EqualSplit.tsx`, under the number
   - [x] `Tally.tsx`
   - [x] `Split.tsx`, under `who owes what`, with `nobody's claimed Rs X` in the output when above 0
@@ -253,7 +253,7 @@ The execution list for `hissa_v2_plan.md`. Section numbers (§) refer to that pl
 - [x] `equalText` for even and uneven splits.
 - [x] The amounts in `text()` equal `shareOf` for each person (no second maths path).
 
-- [ ] Commit: "Share the result as text or an image".
+- [x] Commit: "Share the result as text or an image". _as f9dd9cb_
 
 ---
 
@@ -286,7 +286,7 @@ The execution list for `hissa_v2_plan.md`. Section numbers (§) refer to that pl
 - [ ] Android Chrome: flash toggles the torch, and tap-to-focus visibly refocuses on a near object.
 - [ ] iPhone Safari: no flash stub if unsupported, the ring shows, no fullscreen-video takeover, and the camera indicator goes off after leaving.
 
-- [ ] Commit: "Full-screen camera with focus and flash".
+- [x] Commit: "Full-screen camera with focus and flash". _as 8338272_
 
 ---
 
@@ -353,7 +353,7 @@ Driven through the **Claude-in-Chrome extension** in the user's Chrome, with no 
 - [x] `README.md`: screens, budgets table, and `GEMINI_MODEL` unchanged.
 - [x] `context/hissa_spec.md`: a one-line pointer at §3.1 to `hissa_v2_plan.md` §3 (don't rewrite the spec).
 - [x] `index.html` / `how-it-works.html` copy: mention pass the phone and sharing in "how it goes", and update the JSON-LD `featureList`. The landing page stays zero-JS apart from the inline head script. _index.html only; how-it-works covers the maths and privacy, which v2 doesn't change_
-- [ ] Commit: "Document v2".
+- [x] Commit: "Document v2". _as 58d8f27_
 
 ---
 
@@ -394,7 +394,7 @@ Driven through the **Claude-in-Chrome extension** in the user's Chrome, with no 
   - [ ] Reopen it and confirm it picks up v2.
   - [x] Also open a bill created by v2 in a v1 tab: the totals must display, since `serviceAmt` is additive. _by construction: `serviceAmt` is additive and every field v1 reads is still written. Checked the other direction on the preview: extract returns `gstPct`/`discount`/`tip`, with service charge as tip_
 - [x] Performance on the preview: Lighthouse mobile on `/` and `/app`, CLS 0, and TTFB in line with the README numbers. _no Lighthouse through the extension. Navigation timing: landing TTFB 71 ms, load 457 ms, CLS 0 (preview adds Vercel toolbar requests); app from the service worker, CLS 0_
-- [ ] Commit any fixes, then re-run the smoke run.
+- [x] Commit any fixes, then re-run the smoke run. _no fixes were needed on the preview_
 
 ---
 
@@ -402,7 +402,7 @@ Driven through the **Claude-in-Chrome extension** in the user's Chrome, with no 
 
 - [ ] Open a PR `v2` → `master` with the plan link, the before/after budgets, the receipt table and the device matrix results. Merge after review.
 - [ ] Deploy production using the method recorded in Phase 0 (`vercel --prod`, or the merge if git integration is on).
-- [ ] Note the previous production deployment URL first, as the rollback target.
+- [x] Note the previous production deployment URL first, as the rollback target. _https://hissa-pq56od28h-itisamzia-6578s-projects.vercel.app_
 - [ ] Post-deploy on `https://hissa.itisamzia.dev`:
   - [ ] Re-run the Name, Link split and Detection flows against production through the Chrome extension
   - [ ] one real receipt end to end, both split types, share image to a real chat
@@ -420,4 +420,4 @@ Driven through the **Claude-in-Chrome extension** in the user's Chrome, with no 
 
 - [ ] Remove the legacy `gstPct` / `discount` / `tip` fields from `/api/extract` (the `TODO(v2+1w)`), and update its validation test.
 - [ ] Review the extraction logs for arrangement mismatches reported via the heads-up, and adjust the prompt.
-- [ ] Revisit the fonts budget if glyphs were added in Phase 0.
+- [x] Revisit the fonts budget if glyphs were added in Phase 0. _none were added_
