@@ -7,6 +7,7 @@
 
 import { handler, readJson, json, HttpError } from "./_lib/http";
 import { cmd } from "./_lib/redis";
+import { shapeReading, KINDS, type Raw } from "./_lib/reading";
 
 export const config = { runtime: "edge" };
 
@@ -30,9 +31,17 @@ const MAX_BYTES = 1_500_000;
 const PROMPT = `You are reading a photo of a restaurant or shop bill.
 - "price" is the LINE TOTAL for that row (quantity x unit rate), never the unit rate.
 - Copy item names as printed. Skip subtotal, tax, discount and total rows from the items list.
-- "gstPct" is the tax percentage. If the bill shows more than one rate, use the lower one. If none, use 0.
+- "adjustments" lists each charge or reduction printed after the items, at most one of each kind:
+  "gst" for sales tax, GST or VAT (if more than one tax rate is shown, use the lower one);
+  "service" for a service charge (a service charge is never a tip);
+  "discount" for any discount;
+  "tip" only when a tip or gratuity is actually printed.
+- For each adjustment, "pct" is its printed percentage (0 if none is printed) and "amount" is its printed money amount (0 if none).
+- "step" says what the adjustment was calculated on: 1 if on the items subtotal; 2 if on the subtotal after the step-1 adjustments were applied; 3 if after step 2; and so on. Adjustments calculated on the same amount share a step.
+- "printedSubtotal" is the subtotal as printed, or 0 if it is not shown.
+- "printedTotal" is the final amount payable as printed, or 0 if it is not shown.
+- "place" is the restaurant or shop name from the top of the bill, or "" if none is printed.
 - "currency" is a short symbol such as Rs, $, PKR, AED.
-- "printedSubtotal" is the subtotal as printed on the bill, or 0 if it is not shown.
 - Numbers are plain numbers: no commas, no currency symbols.`;
 
 /** Structured output, so there is no fenced-JSON-and-slice dance. Spec §7.2 */
@@ -52,12 +61,24 @@ const SCHEMA = {
         required: ["name", "qty", "price"],
       },
     },
-    gstPct: { type: "NUMBER" },
-    discount: { type: "NUMBER" },
-    tip: { type: "NUMBER" },
+    adjustments: {
+      type: "ARRAY",
+      items: {
+        type: "OBJECT",
+        properties: {
+          kind: { type: "STRING", format: "enum", enum: [...KINDS] },
+          pct: { type: "NUMBER" },
+          amount: { type: "NUMBER" },
+          step: { type: "INTEGER" },
+        },
+        required: ["kind", "pct", "amount", "step"],
+      },
+    },
     printedSubtotal: { type: "NUMBER" },
+    printedTotal: { type: "NUMBER" },
+    place: { type: "STRING" },
   },
-  required: ["currency", "items", "gstPct", "discount", "tip", "printedSubtotal"],
+  required: ["currency", "items", "adjustments", "printedSubtotal", "printedTotal", "place"],
 };
 
 /** Cheap per-IP throttle. Best-effort: a Redis outage must not block reading. */
@@ -72,7 +93,6 @@ async function throttle(req: Request): Promise<void> {
   }
 }
 
-interface Item { name: string; qty: number; price: number }
 
 export default handler(async (req) => {
   if (req.method !== "POST") throw new HttpError("Method not allowed.", 405);
@@ -124,34 +144,12 @@ export default handler(async (req) => {
   };
   const text = data.candidates?.[0]?.content?.parts?.map((p) => p.text ?? "").join("") ?? "";
 
-  let out: { currency?: string; items?: Item[]; gstPct?: number; discount?: number; tip?: number; printedSubtotal?: number };
+  let out: Raw;
   try {
-    out = JSON.parse(text);
+    out = JSON.parse(text) as Raw;
   } catch {
     throw new HttpError("Could not read that bill.", 502);
   }
 
-  const items = (out.items ?? [])
-    .slice(0, 40)
-    .map((i) => ({
-      name: String(i?.name ?? "").slice(0, 60),
-      qty: Number.isFinite(i?.qty) ? Math.max(1, Math.round(i.qty)) : 1,
-      price: Number.isFinite(i?.price) ? i.price : 0,
-    }))
-    .filter((i) => i.name || i.price);
-
-  // Arithmetic check: one comparison that catches most misreads, and tells the
-  // review screen when to be loud about it. Spec §7.4.
-  const summed = items.reduce((s, i) => s + i.price, 0);
-  const printed = Number(out.printedSubtotal) || 0;
-  const suspect = printed > 0 && Math.abs(summed - printed) > Math.max(1, printed * 0.02);
-
-  return json({
-    currency: String(out.currency ?? "Rs").slice(0, 4),
-    items,
-    gstPct: Number(out.gstPct) || 0,
-    discount: Number(out.discount) || 0,
-    tip: Number(out.tip) || 0,
-    suspect,
-  });
+  return json(shapeReading(out));
 });

@@ -7,13 +7,14 @@ import { Capture } from "./screens/Capture";
 import { Preview } from "./screens/Preview";
 import { Editor } from "./screens/Editor";
 import { EqualSplit } from "./screens/EqualSplit";
-import { Start } from "./screens/Start";
+import { Chooser } from "./screens/Chooser";
 import { Join } from "./screens/Join";
 import { Split } from "./screens/Split";
 import { Toast } from "./ui";
 
-import { compute, type DraftBill } from "./lib/money";
-import { identityOf, uid, type Identity } from "./lib/identity";
+import { compute, noAdj, num, type DraftBill } from "./lib/money";
+import { draftFrom, rememberedSteps, rememberSteps } from "./lib/reading";
+import { identityOf, uid, dayMeal, type Identity } from "./lib/identity";
 import type { Claims } from "./lib/split";
 import type { Shot } from "./lib/image";
 import { createBill, extract, fetchBill, putClaims, setSplitUnclaimed, ApiError } from "./lib/api";
@@ -21,15 +22,14 @@ import { loadMe, saveMe, forgetMe, sweep, loadName, saveName } from "./lib/cache
 import { share, copy, buzz } from "./lib/share";
 import { useBillSync } from "./hooks/useBillSync";
 
-type Screen = "home" | "camera" | "preview" | "editor" | "equal" | "start" | "join";
+type Screen = "home" | "camera" | "preview" | "editor" | "equal" | "choose" | "join" | "table" | "turn" | "tally";
 
 const blank = (): DraftBill => ({
   currency: "Rs",
   priceMode: "total",
   items: [{ id: uid(), name: "", qty: "1", price: "" }],
-  gst: "",
-  discount: { mode: "flat", val: "" },
-  tip: { mode: "flat", val: "" },
+  adj: noAdj(),
+  steps: rememberedSteps(),
 });
 
 export function App() {
@@ -41,6 +41,7 @@ export function App() {
   const [bill, setBill] = useState<DraftBill | null>(null);
   const [shot, setShot] = useState<Shot | null>(null);
   const [suspect, setSuspect] = useState(false);
+  const [place, setPlace] = useState("");
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState("");
   const [toast, setToast] = useState("");
@@ -114,20 +115,9 @@ export function App() {
     try {
       const out = await extract(shot.base64);
       setSuspect(Boolean(out.suspect));
-      const items = out.items.map((i) => ({
-        id: uid(),
-        name: i.name,
-        qty: String(i.qty || 1),
-        price: String(i.price || 0),
-      }));
-      setBill({
-        currency: out.currency || "Rs",
-        priceMode: "total",
-        items: items.length ? items : blank().items,
-        gst: out.gstPct ? String(out.gstPct) : "",
-        discount: { mode: "flat", val: out.discount ? String(out.discount) : "" },
-        tip: { mode: "flat", val: out.tip ? String(out.tip) : "" },
-      });
+      setPlace(out.place ?? "");
+      // The editor re-derives the fit live, so only the settled bill is kept.
+      setBill(draftFrom(out, uid).bill);
       setScreen("editor");
     } catch {
       // Never dead-end on a failed read: typing five lines beats a retake.
@@ -147,12 +137,13 @@ export function App() {
     try {
       const t = compute(bill);
       const out = await createBill({
-        billName,
+        billName: billName.trim() || place || dayMeal(),
         currency: bill.currency,
         lines: t.lines,
         subtotal: t.subtotal,
-        gstPct: Number(bill.gst) || 0,
+        gstPct: num(bill.adj.gst.val),
         gstAmt: t.gstAmt,
+        serviceAmt: t.serviceAmt,
         discountAmt: t.discountAmt,
         tipAmt: t.tipAmt,
         total: t.total,
@@ -262,7 +253,7 @@ export function App() {
   };
 
   const goHome = () => {
-    setBill(null); setShot(null); setErr(""); setSuspect(false);
+    setBill(null); setShot(null); setErr(""); setSuspect(false); setPlace("");
     setBillName(""); setJoinCode(""); setJoinName(null);
     setScreen("home");
     navigate("/");
@@ -366,8 +357,13 @@ export function App() {
           bill={bill}
           setBill={setBill}
           suspect={suspect}
-          onEqual={() => setScreen("equal")}
-          onStart={() => { setErr(""); setScreen("start"); }}
+          onEqual={() => { rememberSteps(compute(bill).steps); setScreen("equal"); }}
+          onStart={() => {
+            rememberSteps(compute(bill).steps);
+            setErr("");
+            setBillName(place || dayMeal());
+            setScreen("choose");
+          }}
           onBack={goHome}
         />
       )}
@@ -382,10 +378,13 @@ export function App() {
         />
       )}
 
-      {screen === "start" && (
-        <Start
+      {screen === "choose" && (
+        <Chooser
           billName={billName} setBillName={setBillName}
-          onGo={openSplit} onBack={() => setScreen("editor")}
+          fallback={place || dayMeal()}
+          onLink={openSplit}
+          onPhone={() => { setErr(""); setScreen("table"); }}
+          onBack={() => setScreen("editor")}
           busy={busy} error={err}
         />
       )}

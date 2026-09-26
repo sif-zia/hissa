@@ -24,6 +24,8 @@ export interface BillMeta {
   subtotal: number;
   gstPct: number;
   gstAmt: number;
+  /** v2; absent on bills opened before it. */
+  serviceAmt?: number;
   discountAmt: number;
   tipAmt: number;
   total: number;

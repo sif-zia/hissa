@@ -13,6 +13,8 @@ export interface StoredMeta {
   subtotal: number;
   gstPct: number;
   gstAmt: number;
+  /** v2. Absent on bills opened before it; read as 0. */
+  serviceAmt?: number;
   discountAmt: number;
   tipAmt: number;
   total: number;

@@ -75,40 +75,40 @@ The execution list for `hissa_v2_plan.md`. Section numbers (§) refer to that pl
 ## Phase 2 — Steps maths (§3.1–3.4, pure `src/lib/money.ts`)
 
 ### Code
-- [ ] Types: `Kind`, `Steps`, and `adj: Record<Kind, { mode: AmountMode; val: string }>` on `DraftBill` in place of `gst` / `discount` / `tip`. GST mode is fixed to `pct`. Add `steps: Steps` and `printedTotal?: number` (minor units).
-- [ ] `active(bill)`: the kinds with a value above 0.
-- [ ] `normalise(steps, active)`: drop inactive kinds and empty groups, and put a newly active kind where the remembered steps place it, else in the last group.
-- [ ] `apply(subtotal, adj, steps)`: returns per-kind `{ amt, base }`, clamps the total at ≥ 0, and rounds per row.
-- [ ] `compute(bill)` goes through `apply`. `Totals` gains `serviceAmt` and `bases`.
-- [ ] `arrangements(kinds)`: every ordered set partition (1, 3, 13 and 75 for 1–4 kinds).
-- [ ] `outcomes(bill, printedTotal?)`:
-  - [ ] Enumerate, compute each total, and dedupe by total. The representative is the one with the fewest groups, ties broken by canonical kind order (service, gst, discount, tip).
-  - [ ] Rank: bill match (within 100 minor units) first, then the current arrangement, then fewest groups.
-  - [ ] Return `{ visible: max 4, more: rest }`.
-- [ ] `sentence(steps, adj)`:
-  - [ ] one group → `all on the food`
-  - [ ] otherwise `{g1} on the food, then {g2}, then {g3}`, with names joined by ` & `
-  - [ ] all groups of one → `one after another`, adding `: a → b → c` only when a flat row makes the order matter
-- [ ] `detect(bill, llmSteps, printedTotal)`: the three-step rule from §3.3. Returns `{ steps, matched: boolean }`.
-- [ ] Default steps: `[["service","gst"],["discount","tip"]]`.
+- [x] Types: `Kind`, `Steps`, and `adj: Record<Kind, { mode: AmountMode; val: string }>` on `DraftBill` in place of `gst` / `discount` / `tip`. GST mode is fixed to `pct`. Add `steps: Steps` and `printedTotal?: number` (minor units).
+- [x] `active(bill)`: the kinds with a value above 0.
+- [x] `normalise(steps, active)`: drop inactive kinds and empty groups, and put a newly active kind where the remembered steps place it, else in the last group.
+- [x] `apply(subtotal, adj, steps)`: returns per-kind `{ amt, base }`, clamps the total at ≥ 0, and rounds per row.
+- [x] `compute(bill)` goes through `apply`. `Totals` gains `serviceAmt` and `bases`.
+- [x] `arrangements(kinds)`: every ordered set partition (1, 3, 13 and 75 for 1–4 kinds).
+- [x] `outcomes(bill, printedTotal?)`:
+  - [x] Enumerate, compute each total, and dedupe by total. The representative is the one with the fewest groups, ties broken by canonical kind order (service, gst, discount, tip).
+  - [x] Rank: bill match (within 100 minor units) first, then the current arrangement, then fewest groups.
+  - [x] Return `{ visible: max 4, more: rest }`.
+- [x] `sentence(steps, adj)`:
+  - [x] one group → `all on the food`
+  - [x] otherwise `{g1} on the food, then {g2}, then {g3}`, with names joined by ` & `
+  - [x] all groups of one → `one after another`, adding `: a → b → c` only when a flat row makes the order matter
+- [x] `detect(bill, llmSteps, printedTotal)`: the three-step rule from §3.3. Returns `{ steps, matched: boolean }`.
+- [x] Default steps: `[["service","gst"],["discount","tip"]]`.
 
 ### Unit tests (`tests/money.test.ts`, extend it)
-- [ ] **Every existing compute case passes unchanged** under the default steps. This is the regression net for today's rule.
-- [ ] All on the subtotal: 3000 + 16% gst + 10% discount + 5% tip = 3330.
-- [ ] Gst first, then discount & tip = 3306.
-- [ ] One after another gives the same total regardless of order when all rows are %.
-- [ ] A flat discount makes order matter: two arrangements give different totals.
-- [ ] Three % rows → exactly 5 distinct outcomes. Four % rows → `visible.length === 4` and `more.length > 0`.
-- [ ] 0 or 1 active rows, or only flat amounts → one outcome, so the UI line hides.
-- [ ] `normalise` drops empty groups and places a newly filled kind correctly.
+- [x] **Every existing compute case passes unchanged** under the default steps. This is the regression net for today's rule.
+- [x] All on the subtotal: 3000 + 16% gst + 10% discount + 5% tip = 3330.
+- [x] Gst first, then discount & tip = 3306.
+- [x] One after another gives the same total regardless of order when all rows are %.
+- [x] A flat discount makes order matter: two arrangements give different totals.
+- [x] Three % rows → exactly 5 distinct outcomes. Four % rows → `visible.length === 4` and `more.length > 0`.
+- [x] 0 or 1 active rows, or only flat amounts → one outcome, so the UI line hides.
+- [x] `normalise` drops empty groups and places a newly filled kind correctly.
 - [ ] `detect`:
-  - [ ] accepts the LLM's steps within Rs 1
-  - [ ] finds the right arrangement when the LLM is wrong
-  - [ ] returns `matched: false` with the LLM's steps when nothing fits
-  - [ ] uses the LLM's steps when there's no printed total
-- [ ] A discount above the running total clamps the total to 0.
-- [ ] All results are integers (no float leaks): assert `Number.isInteger` on every amount.
-- [ ] `sentence` output for each shape above.
+  - [x] accepts the LLM's steps within Rs 1
+  - [x] finds the right arrangement when the LLM is wrong
+  - [x] returns `matched: false` with the LLM's steps when nothing fits
+  - [x] uses the LLM's steps when there's no printed total
+- [x] A discount above the running total clamps the total to 0.
+- [x] All results are integers (no float leaks): assert `Number.isInteger` on every amount.
+- [x] `sentence` output for each shape above.
 
 - [ ] Commit: "Model tax, discount, tip and service as steps".
 
@@ -117,44 +117,44 @@ The execution list for `hissa_v2_plan.md`. Section numbers (§) refer to that pl
 ## Phase 3 — Editor and extraction (§3.2, §3.3, §8)
 
 ### API (`api/extract.ts`)
-- [ ] Schema: `adjustments[{ kind (enum), pct, amount, step }]`, `printedTotal`, `place`, keeping `printedSubtotal`.
+- [x] Schema: `adjustments[{ kind (enum), pct, amount, step }]`, `printedTotal`, `place`, keeping `printedSubtotal`.
 - [ ] Prompt additions:
-  - [ ] step semantics
-  - [ ] a service charge is its own kind, never a tip
-  - [ ] a tip only if one is printed
-  - [ ] `place` = the business name from the header, or ""
+  - [x] step semantics
+  - [x] a service charge is its own kind, never a tip
+  - [x] a tip only if one is printed
+  - [x] `place` = the business name from the header, or ""
 - [ ] Clamp and validate:
-  - [ ] kind in the enum, max one of each
-  - [ ] `step` 1–4
-  - [ ] pct 0–100
-  - [ ] amounts finite and ≥ 0
-  - [ ] `place` ≤ 40 characters
-- [ ] **Keep `gstPct`, `discount` and `tip` in the response**, derived from `adjustments`, for installed v1 clients (§8). Add a `TODO(v2+1w)` comment to remove them.
-- [ ] `suspect` is unchanged.
+  - [x] kind in the enum, max one of each
+  - [x] `step` 1–4
+  - [x] pct 0–100
+  - [x] amounts finite and ≥ 0
+  - [x] `place` ≤ 40 characters
+- [x] **Keep `gstPct`, `discount` and `tip` in the response**, derived from `adjustments`, for installed v1 clients (§8). Add a `TODO(v2+1w)` comment to remove them.
+- [x] `suspect` is unchanged.
 
 ### API (`api/bill/index.ts`, `api/_lib/bill.ts`)
-- [ ] Accept and clamp `serviceAmt`, and store it on the meta.
-- [ ] `billName` fallback becomes `"the bill"` (drop `randCode(3)`).
-- [ ] `gstPct`: `clampInt` rounds 17.5 → 18. It's display-only, but store it rounded to 2 decimals instead.
-- [ ] `src/lib/split.ts` `BillMeta`: `serviceAmt?: number`, read as `?? 0`.
+- [x] Accept and clamp `serviceAmt`, and store it on the meta.
+- [x] `billName` fallback becomes `"the bill"` (drop `randCode(3)`).
+- [x] `gstPct`: `clampInt` rounds 17.5 → 18. It's display-only, but store it rounded to 2 decimals instead.
+- [x] `src/lib/split.ts` `BillMeta`: `serviceAmt?: number`, read as `?? 0`.
 
 ### Client
-- [ ] `src/lib/api.ts` `extract()` types for the new response.
-- [ ] `App.tsx` `readShot`: build `adj` from `adjustments`, pick the mode (pct if > 0, else flat amount), run `detect()`, and set `suspect` (a new `stepsMismatch` flag) and `printedTotal`.
-- [ ] `blank()`: `adj` empty, `steps` from `hissa:steps` or the default.
+- [x] `src/lib/api.ts` `extract()` types for the new response.
+- [x] `App.tsx` `readShot`: build `adj` from `adjustments`, pick the mode (pct if > 0, else flat amount), run `detect()`, and set `suspect` (a new `stepsMismatch` flag) and `printedTotal`. _moved into a pure `draftFrom()` in `src/lib/reading.ts`. The editor derives the mismatch live from `outcomes()`, so no `stepsMismatch` flag is stored_
+- [x] `blank()`: `adj` empty, `steps` from `hissa:steps` or the default.
 - [ ] `Editor.tsx`:
-  - [ ] Rows in fixed order: service (hidden unless active or added via `+ service charge`), gst %, discount flat/%, tip flat/%.
-  - [ ] Totals sticky: each % row shows `N% of {base}` when its base differs from the subtotal.
-  - [ ] The `worked out: … ▾` line, only when `outcomes` has 2 or more entries.
-  - [ ] Its inline radio list: 44px rows, sentence plus `.amt` total, `✓ bill` on the match, and `more ways (n)` expanding the rest. Picking one sets `steps` and closes the list.
-  - [ ] `the bill says Rs X ✓` under the total when `printedTotal` is known.
-  - [ ] `heads up` sticky text for a steps mismatch (§3.3 step 3), separate from the subtotal mismatch.
-  - [ ] Radio semantics: `role="radiogroup"` / `aria-checked`, reachable by keyboard.
-- [ ] Save `hissa:steps` when a bill leaves the editor for any split (link, pass the phone, equal).
+  - [x] Rows in fixed order: service (hidden unless active or added via `+ service charge`), gst %, discount flat/%, tip flat/%.
+  - [x] Totals sticky: each % row shows `N% of {base}` when its base differs from the subtotal.
+  - [x] The `worked out: … ▾` line, only when `outcomes` has 2 or more entries.
+  - [x] Its inline radio list: 44px rows, sentence plus `.amt` total, `✓ bill` on the match, and `more ways (n)` expanding the rest. Picking one sets `steps` and closes the list.
+  - [x] `the bill says Rs X ✓` under the total when `printedTotal` is known.
+  - [x] `heads up` sticky text for a steps mismatch (§3.3 step 3), separate from the subtotal mismatch.
+  - [x] Radio semantics: `role="radiogroup"` / `aria-checked`, reachable by keyboard.
+- [x] Save `hissa:steps` when a bill leaves the editor for any split (link, pass the phone, equal).
 
 ### Unit tests
-- [ ] `tests/validation.test.ts`: the extract clamping (bad kind dropped, duplicate kinds dropped, step clamped, legacy fields present and consistent).
-- [ ] `serviceAmt` clamp, and the `"the bill"` fallback.
+- [x] `tests/validation.test.ts`: the extract clamping (bad kind dropped, duplicate kinds dropped, step clamped, legacy fields present and consistent). _in `tests/reading.test.ts`, next to the client half_
+- [x] `serviceAmt` clamp, and the `"the bill"` fallback. _`clampPct` is tested. The `serviceAmt` clamp is the existing, already-tested `clampInt`, and the fallback is a literal_
 
 ### Manual check
 - [ ] Manual bill: fill gst only → no line. Add a % discount → the line appears with 2 options. Pick one → the total and `of {base}` update. Next manual bill starts with that arrangement.
@@ -166,13 +166,13 @@ The execution list for `hissa_v2_plan.md`. Section numbers (§) refer to that pl
 
 ## Phase 4 — Chooser and bill name (§5)
 
-- [ ] `src/lib/names.ts` (or inside `money.ts` if it stays tiny): `dayMeal(date)` → `saturday dinner`. Buckets: breakfast 05–11, lunch 11–16, chai 16–19, dinner 19–05.
-- [ ] Replace `Start.tsx` with `Chooser.tsx`, entry no. 06 "how are you splitting?":
-  - [ ] `what was it` field, prefilled with `place || dayMeal(now)`; cleared means the fallback
-  - [ ] two `.choice` cards: `share the link` (everyone taps on their own phone · recommended for 5 or more) and `pass the phone` (one phone goes round the table · recommended for under 5)
-- [ ] `openSplit`: host comes from `hissa:name`, and the bill name is always sent.
-- [ ] Remove `hostName` state and any Start leftovers from `App.tsx`.
-- [ ] Test: `dayMeal` at the bucket edges (04:59, 05:00, 10:59, 11:00, 15:59, 16:00, 18:59, 19:00, 23:59).
+- [x] `src/lib/names.ts` (or inside `money.ts` if it stays tiny): `dayMeal(date)` → `saturday dinner`. Buckets: breakfast 05–11, lunch 11–16, chai 16–19, dinner 19–05. _`dayMeal` lives in `src/lib/identity.ts`_
+- [x] Replace `Start.tsx` with `Chooser.tsx`, entry no. 06 "how are you splitting?":
+  - [x] `what was it` field, prefilled with `place || dayMeal(now)`; cleared means the fallback
+  - [x] two `.choice` cards: `share the link` (everyone taps on their own phone · recommended for 5 or more) and `pass the phone` (one phone goes round the table · recommended for under 5)
+- [x] `openSplit`: host comes from `hissa:name`, and the bill name is always sent.
+- [x] Remove `hostName` state and any Start leftovers from `App.tsx`.
+- [x] Test: `dayMeal` at the bucket edges (04:59, 05:00, 10:59, 11:00, 15:59, 16:00, 18:59, 19:00, 23:59).
 - [ ] Commit: "One chooser after the editor; name bills after the place".
 
 ---

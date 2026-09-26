@@ -61,6 +61,13 @@ export const clampInt = (v: unknown, lo: number, hi: number): number => {
   return Math.min(hi, Math.max(lo, Math.round(n)));
 };
 
+/** A percentage, 0-100, kept to two decimals (17.5% GST is a real rate). */
+export const clampPct = (v: unknown): number => {
+  const n = typeof v === "number" ? v : Number(v);
+  if (!Number.isFinite(n)) return 0;
+  return Math.min(100, Math.max(0, Math.round(n * 100) / 100));
+};
+
 /** Storage keys must survive being pasted into a Redis field name. */
 export const safeSlug = (v: unknown): string => {
   const s = String(v ?? "").toLowerCase().replace(/[^a-z0-9-]/g, "").slice(0, 40);
