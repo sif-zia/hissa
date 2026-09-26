@@ -186,12 +186,17 @@ export function arrangements(kinds: readonly Kind[]): Steps[] {
   return out;
 }
 
-const keyOf = (st: Steps): string => st.map((g) => g.join("&")).join(">");
+/** Each kind's step number, in KINDS order: gst-first sorts before discount-first. */
+const rank = (st: Steps): number[] => KINDS.map((k) => st.findIndex((g) => g.includes(k)));
 
-/** Fewer steps first, then canonical kind order: the plainest reading wins. */
-const simpler = (a: Steps, b: Steps): number =>
-  a.length - b.length ||
-  (keyOf(a) < keyOf(b) ? -1 : keyOf(a) > keyOf(b) ? 1 : 0);
+/** Fewer steps first, then the rows' fixed order: the plainest reading wins. */
+const simpler = (a: Steps, b: Steps): number => {
+  if (a.length !== b.length) return a.length - b.length;
+  const ra = rank(a);
+  const rb = rank(b);
+  for (let i = 0; i < ra.length; i += 1) if (ra[i] !== rb[i]) return ra[i]! - rb[i]!;
+  return 0;
+};
 
 /** Within this, a computed total counts as the printed one. One major unit. */
 export const MATCH_SLACK = 100;
@@ -214,14 +219,17 @@ export interface Outcome {
 export function outcomes(bill: DraftBill, max = 4): { visible: Outcome[]; more: Outcome[] } {
   const subtotal = compute(bill).subtotal;
   const act = active(bill.adj);
-  const cur = apply(subtotal, bill.adj, normalise(bill.steps, act)).total;
+  const curSteps = normalise(bill.steps, act);
+  const cur = apply(subtotal, bill.adj, curSteps).total;
   const printed = bill.printedTotal;
 
-  const byTotal = new Map<number, Steps>();
+  // The stacking in use speaks for its own total, so the list never words the
+  // selected option differently from the "worked out" line above it.
+  const byTotal = new Map<number, Steps>([[cur, curSteps]]);
   for (const st of arrangements(act)) {
     const t = apply(subtotal, bill.adj, st).total;
     const had = byTotal.get(t);
-    if (!had || simpler(st, had) < 0) byTotal.set(t, st);
+    if (!had || (t !== cur && simpler(st, had) < 0)) byTotal.set(t, st);
   }
 
   const all: Outcome[] = [...byTotal].map(([total, steps]) => ({

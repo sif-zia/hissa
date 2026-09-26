@@ -28,8 +28,13 @@ describe("shapeReading (server)", () => {
     expect(out.adjustments.map((a) => a.kind)).toEqual(["gst", "service", "tip"]);
     expect(out.adjustments[0]).toEqual({ kind: "gst", pct: 16, amount: 480, step: 1 });
   });
-  it("clamps percentages, amounts and steps", () => {
-    expect(out.adjustments[2]).toEqual({ kind: "tip", pct: 100, amount: 0, step: 4 });
+  it("clamps percentages and steps, and reads a negative amount as its size", () => {
+    expect(out.adjustments[2]).toEqual({ kind: "tip", pct: 100, amount: 5, step: 4 });
+  });
+  it("reads a discount printed as -348 as 348", () => {
+    const d = shapeReading({ adjustments: [{ kind: "discount", pct: 0, amount: -348, step: 2 }] });
+    expect(d.adjustments[0]!.amount).toBe(348);
+    expect(d.discount).toBe(348);
   });
   it("cleans the place and reads a string total", () => {
     expect(out.place).toBe("Kolachi Do Darya");
@@ -41,7 +46,7 @@ describe("shapeReading (server)", () => {
   it("keeps the v1 fields, with service riding in as tip", () => {
     expect(out.gstPct).toBe(16);
     expect(out.discount).toBe(0);
-    expect(out.tip).toBe(0 + 300);
+    expect(out.tip).toBe(5 + 300);
   });
 
   it("survives a model that returns junk", () => {

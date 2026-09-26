@@ -232,6 +232,18 @@ describe("outcomes", () => {
     expect(visible[0]!.steps).toEqual([["discount", "tip"]]);
   });
 
+  it("words the selected option exactly as the stacking in use", () => {
+    // Percentages commute, so "discount & tip, then gst" ties with the default.
+    const { visible } = outcomes(three(DEFAULT_STEPS));
+    expect(visible.find((o) => o.current)!.steps).toEqual([["gst"], ["discount", "tip"]]);
+  });
+
+  it("breaks ties by the rows' fixed order, not the alphabet", () => {
+    const { visible, more } = outcomes(three([["gst", "discount", "tip"]]), 99);
+    const tie = [...visible, ...more].find((o) => o.total === 330600)!;
+    expect(tie.steps).toEqual([["gst"], ["discount", "tip"]]);
+  });
+
   it("keeps a three-step chain as its own outcome when its total is distinct", () => {
     const all = outcomes(three(DEFAULT_STEPS), 99);
     expect([...all.visible, ...all.more].some((o) => o.steps.length === 3)).toBe(true);

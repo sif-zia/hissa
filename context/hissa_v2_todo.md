@@ -292,60 +292,52 @@ The execution list for `hissa_v2_plan.md`. Section numbers (§) refer to that pl
 
 ## Phase 8 — End-to-end tests
 
-Playwright as a **dev** dependency only; it never reaches the bundle.
+Driven through the **Claude-in-Chrome extension** in the user's Chrome, with no Playwright and no new dependency. The trade-off: the pass isn't a committed, re-runnable suite, and there's no WebKit engine. Real iOS Safari is covered by the Phase 10 device matrix. Each flow is recorded as a GIF.
 
 ### Setup
-- [ ] `pnpm add -D @playwright/test` and `pnpm exec playwright install chromium webkit`.
-- [ ] `playwright.config.ts`:
-  - [ ] `testDir: "e2e"`, files `*.spec.ts` (vitest only picks up `tests/**/*.test.ts`, so there's no overlap)
-  - [ ] `webServer: pnpm dev` (the dev server handles `/s/CODE` through the `deepLinks` middleware; `vite preview` doesn't)
-  - [ ] Projects:
-    - [ ] `mobile-chrome` (Pixel 7), with `--use-fake-ui-for-media-stream --use-fake-device-for-media-stream` and camera permission granted
-    - [ ] `mobile-safari` (iPhone 14, WebKit), which has no fake camera, so this project covers the fallback path
-    - [ ] `smoke`, using `E2E_BASE_URL` against a real deployment, only running specs tagged `@smoke`
-- [ ] `e2e/fake-api.ts`: `page.route("**/api/**")` backed by an in-memory store shared across browser contexts in one test.
-  - [ ] Covers `POST /api/bill`, `GET /api/bill/:code` (ETag / 304), `PUT …/claims` and `PUT …/meta`.
-  - [ ] Covers `POST /api/extract`, returning canned responses per test, so no Gemini spend.
-- [ ] `e2e/helpers.ts`: `withName(page, name)` seeds `hissa:name`, `enterBill(page, lines, extras)`, and `readClipboard(page)` (Chromium permission).
-- [ ] `package.json`: `"e2e": "playwright test"`, `"e2e:smoke": "playwright test --project=smoke"`.
-- [ ] `.gitignore`: `test-results/`, `playwright-report/`.
+- [ ] `vercel dev` running (client + `/api` + real Upstash, and real Gemini from `.env.local`).
+- [ ] A fresh tab at a phone-sized window (≈ 390×844) for every flow. Clear `hissa:*` localStorage between flows with the page's JS console.
+- [ ] Synthetic receipts: render a receipt in a page canvas, encode it to JPEG, and POST it to `/api/extract` from the page, one per arrangement (gst only; gst + service; discount before tax; discount after tax; flat discount; printed tip). This stands in for the real-photo set until one exists.
 
-### Specs
-- [ ] `name.spec.ts`: first visit asks; reload doesn't; `not you?` changes it; a `/s/CODE` link without a name asks first, then joins.
-- [ ] `landing.spec.ts`: no name → landing page; with a name → `/app`; `/?about` stays; `/how-it-works` never redirects.
-- [ ] `extras.spec.ts`:
-  - [ ] the manual bill line shows and hides at the right times
+### Flows
+- [ ] **Name:** first visit asks; reload doesn't; `not you?` changes it; a `/s/CODE` link without a name asks first, then joins.
+- [ ] **Landing:** no name → landing page; with a name → `/app`; `/?about` stays; `/how-it-works` never redirects.
+- [ ] **Extras (manual bill):**
+  - [ ] the worked-out line shows and hides at the right times
   - [ ] picking an option changes the total and the `of {base}` labels
   - [ ] the arrangement is remembered for the next manual bill
   - [ ] `+ service charge` shows the row
-- [ ] `detect.spec.ts` (mocked extract):
-  - [ ] matching printed total → `✓ bill` and no warning
-  - [ ] LLM steps wrong but another arrangement matches → corrected, with `✓`
-  - [ ] nothing matches → `heads up` sticky
+- [ ] **Detection (synthetic receipts through real Gemini):**
+  - [ ] the schema is accepted (no 400/502)
+  - [ ] `✓ bill` shows when the printed total matches
+  - [ ] a wrong model stacking gets corrected
+  - [ ] the heads-up shows when nothing fits
   - [ ] `place` prefills the chooser
-- [ ] `chooser.spec.ts`: prefill from `place`; without it, day + meal (freeze the clock with `page.clock`); both cards route correctly.
-- [ ] `pass-the-phone.spec.ts`:
+- [ ] **Chooser:** the place prefill, the day + meal fallback, and both cards routing correctly.
+- [ ] **Pass the phone:**
   - [ ] 3 people; a duplicate name blocks start
   - [ ] handoff cards for persons 2 and 3 only
   - [ ] earlier chips visible on later turns
   - [ ] the tally sum equals the bill total
   - [ ] redo person 2 and the tally updates
   - [ ] the leftovers toggle
-- [ ] `resume.spec.ts`: reload mid-round → the home stub → the same turn; the round is gone after the clock moves 25h.
-- [ ] `share.spec.ts`:
-  - [ ] copy text with and without items (clipboard); the toggle survives a reload
-  - [ ] `share as image`: with `navigator.share` stubbed via `addInitScript` to capture `files`, assert one `image/png` above 10 KB; with `share` removed, assert a download event
+- [ ] **Resume:** reload mid-round → the home stub → the same turn.
+- [ ] **Share:**
+  - [ ] copy text with and without items (read back from the clipboard); the toggle survives a reload
+  - [ ] `share as image` on desktop Chrome falls back to a PNG download; the downloaded card is inspected visually
   - [ ] equal-split text
-- [ ] `link-split.spec.ts` (two browser contexts, fake API): the host opens a split; a guest context with a stored name opens `/s/CODE` and is auto-joined with no form; the guest's tap appears for the host after a poll; the snapshot share includes `nobody's claimed` when above 0.
-- [ ] `camera.spec.ts`:
-  - [ ] chromium: the `.cam` layer fills the viewport; the shutter → preview; no flash stub on the fake device; a tap on the video draws the ring; `✕` returns home
-  - [ ] webkit: the fallback button is present
-- [ ] `motion.spec.ts`: with `reducedMotion: "reduce"`, the camera note and focus ring don't animate (computed `animation-name: none`).
-- [ ] Tag `@smoke`: `name`, `link-split` (real API), and one `detect` run with a **real** receipt upload (the file input path, skipped unless `E2E_RECEIPT` is set).
+- [ ] **Link split:** the host opens a split in one tab; a second tab with a different stored name opens `/s/CODE` and is auto-joined with no form; the guest's tap appears for the host within about 5s; the snapshot share includes `nobody's claimed` when above 0.
+- [ ] **Camera:**
+  - [ ] the `.cam` layer fills the viewport
+  - [ ] the shutter → preview (the Mac webcam stands in for the phone camera)
+  - [ ] no flash stub (no torch on a webcam)
+  - [ ] a tap draws the ring
+  - [ ] `✕` returns home
+  - [ ] the camera light goes off after leaving
+- [ ] **Theme and motion:** light and dark on every new screen. Reduced motion is checked by forcing the media query through DevTools rendering emulation, or noted if the extension can't.
 
 ### Gate
-- [ ] `pnpm test && pnpm e2e` are green locally on both projects.
-- [ ] Commit: "End-to-end tests for v2".
+- [ ] `pnpm test` is green, and every flow above passes or has a noted, fixed defect.
 
 ---
 
@@ -354,11 +346,11 @@ Playwright as a **dev** dependency only; it never reaches the bundle.
 - [ ] `CLAUDE.md`:
   - [ ] Rewrite "Order of operations at bill level" as the steps rule, with the default arrangement.
   - [ ] Screens: name → home → capture → preview → editor → (equal | chooser → link split | table → turns → tally), plus join.
-  - [ ] Update the test count, and add the `pnpm e2e` commands.
+  - [ ] Update the test count.
   - [ ] Add to "Things that bit": the `sweep()` vs un-`at`ed keys issue, and pre-rendering the PNG for iOS share, if either actually bit.
   - [ ] Add the new localStorage keys under the invariants.
   - [ ] Update the budget line with measured numbers.
-- [ ] `README.md`: screens, budgets table, the e2e section, and `GEMINI_MODEL` unchanged.
+- [ ] `README.md`: screens, budgets table, and `GEMINI_MODEL` unchanged.
 - [ ] `context/hissa_spec.md`: a one-line pointer at §3.1 to `hissa_v2_plan.md` §3 (don't rewrite the spec).
 - [ ] `index.html` / `how-it-works.html` copy: mention pass the phone and sharing in "how it goes", and update the JSON-LD `featureList`. The landing page stays zero-JS apart from the inline head script.
 - [ ] Commit: "Document v2".
@@ -382,7 +374,7 @@ Playwright as a **dev** dependency only; it never reaches the bundle.
   - [ ] `/?about`
   - [ ] `/how-it-works`
   - [ ] `noindex` still on the app, and canonical and OG still correct on `/`
-- [ ] `E2E_BASE_URL=<preview> pnpm e2e:smoke` is green.
+- [ ] Re-run the Name, Link split and Detection flows (Phase 8) against the preview URL through the Chrome extension.
 - [ ] Real extraction on the preview: run the full receipt set. Record per receipt the items, the subtotal flag, the detected arrangement, `✓ bill` yes/no, and `place`.
   - [ ] **Bar: the arrangement is right on ≥ 8 of 10**, and the heads-up fires on every one that's wrong.
   - [ ] Below the bar, tune the prompt, not the maths.
@@ -412,7 +404,7 @@ Playwright as a **dev** dependency only; it never reaches the bundle.
 - [ ] Deploy production using the method recorded in Phase 0 (`vercel --prod`, or the merge if git integration is on).
 - [ ] Note the previous production deployment URL first, as the rollback target.
 - [ ] Post-deploy on `https://hissa.itisamzia.dev`:
-  - [ ] `E2E_BASE_URL=https://hissa.itisamzia.dev pnpm e2e:smoke`
+  - [ ] Re-run the Name, Link split and Detection flows against production through the Chrome extension
   - [ ] one real receipt end to end, both split types, share image to a real chat
   - [ ] the v1 compatibility check from Phase 10
 - [ ] Watch for 24h: `vercel logs` for 4xx/5xx on `/api/extract` and `/api/bill*`, and Gemini 400/404s (model or schema rejections), and Upstash usage.

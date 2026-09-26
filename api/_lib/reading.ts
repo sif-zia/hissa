@@ -17,9 +17,10 @@ export interface Raw {
   adjustments?: unknown; printedSubtotal?: unknown; printedTotal?: unknown;
 }
 
+/** Bills print discounts as "-348"; the sign is the kind's job, not the amount's. */
 const money = (v: unknown): number => {
-  const n = Number(v);
-  return Number.isFinite(n) && n > 0 ? n : 0;
+  const n = Math.abs(Number(v));
+  return Number.isFinite(n) ? n : 0;
 };
 
 export function shapeReading(out: Raw) {
