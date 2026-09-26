@@ -3,6 +3,8 @@ import { fmt } from "../lib/money";
 import { spread, shareOf, type BillMeta, type Claims, type Person } from "../lib/split";
 import { paletteFor, type Identity } from "../lib/identity";
 import { ItemList } from "./ItemList";
+import { ShareBlock } from "./ShareBlock";
+import { billSummary } from "../lib/summary";
 
 /**
  * Tap to claim. Whole-row targets, claimer chips, live per-person totals, and
@@ -10,7 +12,7 @@ import { ItemList } from "./ItemList";
  */
 export function Split({
   meta, people, me, mine, onTap, onBump, onToggleLeftovers, onCopyLink, onCopyCode, onRefresh,
-  live, refreshing, stale, error, onBack, onChangeName,
+  live, refreshing, stale, error, onBack, onChangeName, flash,
 }: {
   meta: BillMeta;
   people: Person[];
@@ -28,6 +30,7 @@ export function Split({
   error: string;
   onBack: () => void;
   onChangeName: () => void;
+  flash: (m: string) => void;
 }) {
   const cur = meta.currency;
   const money = (c: number) => fmt(c, cur, true);
@@ -123,6 +126,8 @@ export function Split({
           </div>
         ))}
       </div>
+
+      <ShareBlock make={(w) => billSummary(meta, everyone, palette, w)} flash={flash} />
 
       <p class="scrawl dim small" style={{ marginTop: 20 }}>
         {live

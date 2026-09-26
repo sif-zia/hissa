@@ -352,6 +352,7 @@ export function App() {
           error={sync.error || err}
           onBack={goHome}
           onChangeName={changeName}
+          flash={flash}
         />
         <Toast message={toast} />
       </>
@@ -430,6 +431,7 @@ export function App() {
           heads={heads}
           setHeads={setHeads}
           onBack={() => setScreen("editor")}
+          flash={flash}
         />
       )}
 
@@ -482,6 +484,7 @@ export function App() {
           onToggleLeftovers={() =>
             setRound({ ...round, meta: { ...round.meta, splitUnclaimed: !round.meta.splitUnclaimed } })}
           onBack={goHome}
+          flash={flash}
         />
       )}
 

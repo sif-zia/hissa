@@ -1,20 +1,20 @@
-import type { ComponentChildren } from "preact";
 import { Sheet, Head, Amount } from "../ui";
 import { fmt } from "../lib/money";
 import { spread, shareOf } from "../lib/split";
 import { paletteFor } from "../lib/identity";
 import type { Round } from "../lib/round";
+import { billSummary } from "../lib/summary";
+import { ShareBlock } from "./ShareBlock";
 
 /** Everyone's number, one phone. Tap a name to fix that person's turn. */
 export function Tally({
-  round, onRedo, onToggleLeftovers, onBack, children,
+  round, onRedo, onToggleLeftovers, onBack, flash,
 }: {
   round: Round;
   onRedo: (index: number) => void;
   onToggleLeftovers: () => void;
   onBack: () => void;
-  /** The share block. */
-  children?: ComponentChildren;
+  flash: (m: string) => void;
 }) {
   const { meta, people } = round;
   const money = (c: number) => fmt(c, meta.currency, true);
@@ -72,7 +72,7 @@ export function Tally({
 
       <p class="scrawl dim" style={{ marginTop: 14 }}>tap a name to redo their turn</p>
 
-      {children}
+      <ShareBlock make={(w) => billSummary(meta, people, palette, w)} flash={flash} />
     </Sheet>
   );
 }

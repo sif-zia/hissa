@@ -1,22 +1,27 @@
 import { Sheet, Head, Amount } from "../ui";
 import { fmt } from "../lib/money";
 import { equalSplit } from "../lib/split";
+import { useState } from "preact/hooks";
 import { tiltStyle } from "../lib/tilt";
+import { equalSummary } from "../lib/summary";
+import { ShareBlock } from "./ShareBlock";
 
 /**
  * A local calculator. Never touches shared storage: no code, no names, no
  * network. Spec §2.5.
  */
 export function EqualSplit({
-  total, currency, heads, setHeads, onBack,
+  total, currency, heads, setHeads, onBack, flash,
 }: {
   total: number;
   currency: string;
   heads: number;
   setHeads: (n: number) => void;
   onBack: () => void;
+  flash: (m: string) => void;
 }) {
   const { base, extra } = equalSplit(total, heads);
+  const [at] = useState(Date.now);
 
   return (
     <Sheet>
@@ -50,6 +55,8 @@ export function EqualSplit({
           <p class="scrawl dim" style={{ marginTop: 10 }}>divides perfectly. rare.</p>
         )}
       </div>
+
+      <ShareBlock make={() => equalSummary(total, heads, currency, at)} items={false} flash={flash} />
     </Sheet>
   );
 }

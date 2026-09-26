@@ -224,34 +224,34 @@ The execution list for `hissa_v2_plan.md`. Section numbers (§) refer to that pl
 ## Phase 6 — Sharing (§7)
 
 ### Code
-- [ ] `spread()` also returns `cuts: Record<lineId, Record<key, number>>` (it already computes them; don't recompute elsewhere).
-- [ ] `src/lib/summary.ts`:
-  - [ ] `summary(meta, people, { withItems, splitUnclaimed })` → `{ title, date, rows: [{ name, colour, amt, items?: [{ name, frac, amt }] }], total, loose }`
-  - [ ] `fraction(portions, units)` → `½ ⅓ ¼ ⅔ ¾`, else `a/b`, else "" for whole
-  - [ ] `text(summary)` → the plain-lines format from §7
-  - [ ] `equalText(total, n, cur)`
-- [ ] `src/lib/card.ts`:
-  - [ ] `drawCard(summary)` → `Promise<Blob>`: canvas 1080 wide, height from rows, **light palette constants** (not CSS variables, so the viewer's theme can't leak in)
-  - [ ] await `document.fonts.load()` for all three faces first
-  - [ ] dashed rule, dots, `split with hissa` footer
-- [ ] `src/lib/share.ts`:
-  - [ ] `shareImage(blob, text, filename)`: `navigator.canShare({ files })` → `navigator.share`, otherwise an `<a download>` fallback, with `AbortError` treated as nothing happening (as in the existing `share()`)
-  - [ ] `copy` reused for text
-- [ ] `ShareBlock` component:
-  - [ ] a `with items` toggle (hidden for equal split), persisted in `hissa:withItems`
-  - [ ] `share as image` and `copy` buttons
-  - [ ] toasts: `copied`, `shared`, `saved`
-  - [ ] **pre-render the PNG** in an effect keyed on the summary and toggle (debounced ~300ms), so the tap never awaits fonts or `toBlob` (the iOS user-activation rule)
+- [x] `spread()` also returns `cuts: Record<lineId, Record<key, number>>` (it already computes them; don't recompute elsewhere).
+- [x] `src/lib/summary.ts`:
+  - [x] `summary(meta, people, { withItems, splitUnclaimed })` → `{ title, date, rows: [{ name, colour, amt, items?: [{ name, frac, amt }] }], total, loose }` _as `billSummary()`; each person's items end with an `extras` line so they add up to that person's number_
+  - [x] `fraction(portions, units)` → `½ ⅓ ¼ ⅔ ¾`, else `a/b`, else "" for whole _always plain `1/2`: the subset fonts carry no ½ glyph_
+  - [x] `text(summary)` → the plain-lines format from §7
+  - [x] `equalText(total, n, cur)` _as `equalSummary()`, so equal split gets a card too_
+- [x] `src/lib/card.ts`:
+  - [x] `drawCard(summary)` → `Promise<Blob>`: canvas 1080 wide, height from rows, **light palette constants** (not CSS variables, so the viewer's theme can't leak in)
+  - [x] await `document.fonts.load()` for all three faces first
+  - [x] dashed rule, dots, `split with hissa` footer
+- [x] `src/lib/share.ts`:
+  - [x] `shareImage(blob, text, filename)`: `navigator.canShare({ files })` → `navigator.share`, otherwise an `<a download>` fallback, with `AbortError` treated as nothing happening (as in the existing `share()`)
+  - [x] `copy` reused for text
+- [x] `ShareBlock` component:
+  - [x] a `with items` toggle (hidden for equal split), persisted in `hissa:withItems`
+  - [x] `share as image` and `copy` buttons
+  - [x] toasts: `copied`, `shared`, `saved`
+  - [x] **pre-render the PNG** in an effect keyed on the summary and toggle (debounced ~300ms), so the tap never awaits fonts or `toBlob` (the iOS user-activation rule)
 - [ ] Place it on:
-  - [ ] `EqualSplit.tsx`, under the number
-  - [ ] `Tally.tsx`
-  - [ ] `Split.tsx`, under `who owes what`, with `nobody's claimed Rs X` in the output when above 0
+  - [x] `EqualSplit.tsx`, under the number
+  - [x] `Tally.tsx`
+  - [x] `Split.tsx`, under `who owes what`, with `nobody's claimed Rs X` in the output when above 0
 
 ### Unit tests
-- [ ] `text()` with and without items, with leftovers shared and with some unclaimed.
-- [ ] `fraction`: 1/2 → ½, 2/4 → ½, 2/5 → `2/5`, 3/3 → "".
-- [ ] `equalText` for even and uneven splits.
-- [ ] The amounts in `text()` equal `shareOf` for each person (no second maths path).
+- [x] `text()` with and without items, with leftovers shared and with some unclaimed.
+- [x] `fraction`: 1/2 → ½, 2/4 → ½, 2/5 → `2/5`, 3/3 → "".
+- [x] `equalText` for even and uneven splits.
+- [x] The amounts in `text()` equal `shareOf` for each person (no second maths path).
 
 - [ ] Commit: "Share the result as text or an image".
 
