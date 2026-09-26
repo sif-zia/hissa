@@ -9,13 +9,17 @@ import { Editor } from "./screens/Editor";
 import { EqualSplit } from "./screens/EqualSplit";
 import { Chooser } from "./screens/Chooser";
 import { Join } from "./screens/Join";
+import { Table } from "./screens/Table";
+import { Turn } from "./screens/Turn";
+import { Tally } from "./screens/Tally";
+import { loadRound, saveRound, seat, type Round } from "./lib/round";
 import { Split } from "./screens/Split";
 import { Toast } from "./ui";
 
 import { compute, noAdj, num, type DraftBill } from "./lib/money";
 import { draftFrom, rememberedSteps, rememberSteps } from "./lib/reading";
 import { identityOf, uid, dayMeal, type Identity } from "./lib/identity";
-import type { Claims } from "./lib/split";
+import { toggleClaim, bumpClaim, type Claims } from "./lib/split";
 import type { Shot } from "./lib/image";
 import { createBill, extract, fetchBill, putClaims, setSplitUnclaimed, ApiError } from "./lib/api";
 import { loadMe, saveMe, forgetMe, sweep, loadName, saveName } from "./lib/cache";
@@ -58,6 +62,13 @@ export function App() {
   const [joinName, setJoinName] = useState<string | null>(null);
 
   const sync = useBillSync(code);
+
+  /* Pass the phone: one round at a time, saved on every tap. */
+  const [round, setRound] = useState<Round | null>(loadRound);
+  const [seatNames, setSeatNames] = useState<string[]>([]);
+  /** Back at the table from turn 1 of a round already under way. */
+  const [reseat, setReseat] = useState(false);
+  useEffect(() => { if (round) saveRound(round); }, [round]);
 
   useEffect(() => { sweep(); }, []);
 
@@ -222,19 +233,14 @@ export function App() {
   );
 
   const tap = (lineId: string) => {
-    const next = { ...mine };
-    if (next[lineId]) delete next[lineId];
-    else next[lineId] = 1;
+    const next = toggleClaim(mine, lineId);
     buzz();
     setMine(next);
     void pushClaims(next);
   };
 
   const bump = (lineId: string, delta: number) => {
-    const next = { ...mine };
-    const v = (next[lineId] ?? 0) + delta;
-    if (v <= 0) delete next[lineId];
-    else next[lineId] = Math.min(v, 20);
+    const next = bumpClaim(mine, lineId, delta);
     buzz();
     setMine(next);
     void pushClaims(next);
@@ -250,6 +256,49 @@ export function App() {
       setErr("Couldn't save that for the group.");
       sync.refresh();
     }
+  };
+
+  /* --- pass the phone ---------------------------------------------------- */
+
+  const startRound = (names: string[]) => {
+    if (reseat && round) {
+      setRound({ ...round, people: seat(names, round.people), turn: 0, redo: false });
+    } else if (bill) {
+      const t = compute(bill);
+      setRound({
+        meta: {
+          code: "",
+          billName: billName.trim() || place || dayMeal(),
+          currency: bill.currency,
+          lines: t.lines,
+          subtotal: t.subtotal,
+          gstPct: num(bill.adj.gst.val),
+          gstAmt: t.gstAmt,
+          serviceAmt: t.serviceAmt,
+          discountAmt: t.discountAmt,
+          tipAmt: t.tipAmt,
+          total: t.total,
+          splitUnclaimed: false,
+          at: Date.now(),
+        },
+        people: seat(names),
+        turn: 0,
+        redo: false,
+        at: Date.now(),
+      });
+    }
+    setReseat(false);
+    setScreen("turn");
+  };
+
+  /** Changes the claims of whoever holds the phone. */
+  const claimFor = (index: number, change: (c: Claims) => Claims) => {
+    if (!round) return;
+    buzz();
+    setRound({
+      ...round,
+      people: round.people.map((p, i) => (i === index ? { ...p, claims: change(p.claims) } : p)),
+    });
   };
 
   const goHome = () => {
@@ -330,6 +379,12 @@ export function App() {
           onManual={() => { setErr(""); setBill(blank()); setScreen("editor"); }}
           onJoin={() => { setErr(""); setScreen("join"); }}
           onResume={(c) => navigate(`/s/${c}`)}
+          round={round ? {
+            label: `${round.meta.billName} · ${
+              round.turn === "tally" ? "tally" : `${round.people[round.turn]?.name}'s turn`
+            }`,
+            open: () => setScreen(round.turn === "tally" ? "tally" : "turn"),
+          } : null}
         />
       )}
 
@@ -383,9 +438,50 @@ export function App() {
           billName={billName} setBillName={setBillName}
           fallback={place || dayMeal()}
           onLink={openSplit}
-          onPhone={() => { setErr(""); setScreen("table"); }}
+          onPhone={() => { setErr(""); setSeatNames([myName]); setReseat(false); setScreen("table"); }}
           onBack={() => setScreen("editor")}
           busy={busy} error={err}
+        />
+      )}
+
+      {screen === "table" && (
+        <Table
+          initial={seatNames}
+          onStart={startRound}
+          onBack={() => setScreen(reseat ? "turn" : "choose")}
+        />
+      )}
+
+      {screen === "turn" && round && typeof round.turn === "number" && (
+        <Turn
+          key={`${round.turn}-${round.redo}`}
+          round={round}
+          index={round.turn}
+          onTap={(id) => claimFor(round.turn as number, (c) => toggleClaim(c, id))}
+          onBump={(id, d) => claimFor(round.turn as number, (c) => bumpClaim(c, id, d))}
+          onDone={() => {
+            const i = round.turn as number;
+            const end = round.redo || i >= round.people.length - 1;
+            setRound({ ...round, turn: end ? "tally" : i + 1, redo: false });
+            window.scrollTo(0, 0);
+            if (end) setScreen("tally");
+          }}
+          onBack={() => {
+            const i = round.turn as number;
+            if (round.redo) { setRound({ ...round, turn: "tally", redo: false }); setScreen("tally"); }
+            else if (i > 0) setRound({ ...round, turn: i - 1 });
+            else { setSeatNames(round.people.map((p) => p.name)); setReseat(true); setScreen("table"); }
+          }}
+        />
+      )}
+
+      {screen === "tally" && round && (
+        <Tally
+          round={round}
+          onRedo={(i) => { setRound({ ...round, turn: i, redo: true }); window.scrollTo(0, 0); setScreen("turn"); }}
+          onToggleLeftovers={() =>
+            setRound({ ...round, meta: { ...round.meta, splitUnclaimed: !round.meta.splitUnclaimed } })}
+          onBack={goHome}
         />
       )}
 

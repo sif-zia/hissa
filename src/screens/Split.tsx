@@ -1,9 +1,8 @@
-import { useEffect, useRef, useState } from "preact/hooks";
 import { Sheet, Head, Amount } from "../ui";
 import { fmt } from "../lib/money";
 import { spread, shareOf, type BillMeta, type Claims, type Person } from "../lib/split";
 import { paletteFor, type Identity } from "../lib/identity";
-import { tiltStyle } from "../lib/tilt";
+import { ItemList } from "./ItemList";
 
 /**
  * Tap to claim. Whole-row targets, claimer chips, live per-person totals, and
@@ -65,43 +64,16 @@ export function Split({
       {/* The item list is a block on the bill: ruled off top and bottom. */}
       <hr class="rule-dash" />
 
-      <div class="lines">
-        {meta.lines.map((line) => {
-          const on = byLine[line.id] ?? [];
-          const myPortions = mine[line.id] ?? 0;
-          return (
-            <button
-              key={line.id}
-              class={myPortions ? "item on" : "item"}
-              onClick={() => onTap(line.id)}
-              aria-pressed={myPortions > 0}
-            >
-              <div class="row">
-                <span style={{ flex: 1 }}>
-                  {line.name}
-                  {line.qty > 1 ? <span class="dim small"> ×{line.qty}</span> : null}
-                </span>
-                <Amount value={money(line.amt)} dim={!myPortions} />
-              </div>
-
-              {on.length ? (
-                <div style={{ display: "flex", gap: 5, flexWrap: "wrap", marginTop: 6 }}>
-                  {on.map((p) => (
-                    <Chip
-                      key={p.key}
-                      person={p}
-                      lineId={line.id}
-                      isMe={p.key === me.key}
-                      onBump={onBump}
-                      colour={palette[p.key] as string}
-                    />
-                  ))}
-                </div>
-              ) : null}
-            </button>
-          );
-        })}
-      </div>
+      <ItemList
+        lines={meta.lines}
+        byLine={byLine}
+        mine={mine}
+        activeKey={me.key}
+        palette={palette}
+        onTap={onTap}
+        onBump={onBump}
+        money={money}
+      />
 
       <hr class="rule-dash" />
 
@@ -170,55 +142,5 @@ export function Split({
         </div>
       </div>
     </Sheet>
-  );
-}
-
-/** A claimer's chip. Yours carries the ×N stepper; nobody else's does. */
-function Chip({
-  person, lineId, isMe, onBump, colour,
-}: {
-  person: Person;
-  lineId: string;
-  isMe: boolean;
-  onBump: (lineId: string, delta: number) => void;
-  colour: string;
-}) {
-  const n = person.claims[lineId] ?? 0;
-  const seen = useRef(false);
-  const [landed, setLanded] = useState(false);
-
-  // A claim arriving from another device should be noticed, not just appear.
-  useEffect(() => {
-    if (seen.current) return;
-    seen.current = true;
-    if (!isMe) {
-      setLanded(true);
-      const t = setTimeout(() => setLanded(false), 400);
-      return () => clearTimeout(t);
-    }
-    return undefined;
-  }, [isMe]);
-
-  const stop = (e: Event, d: number) => {
-    e.stopPropagation();
-    onBump(lineId, d);
-  };
-
-  return (
-    <span
-      class={`chip${landed ? " landed" : ""}`}
-      style={{ ...tiltStyle(`${person.key}-${lineId}`, "scrap"), background: colour }}
-    >
-      {person.name}
-      {isMe ? (
-        <>
-          <button class="step" onClick={(e) => stop(e, -1)} aria-label="One fewer portion">−</button>
-          {n > 1 ? <span class="amt">×{n}</span> : null}
-          <button class="step" onClick={(e) => stop(e, 1)} aria-label="One more portion">+</button>
-        </>
-      ) : n > 1 ? (
-        <span class="amt">×{n}</span>
-      ) : null}
-    </span>
   );
 }

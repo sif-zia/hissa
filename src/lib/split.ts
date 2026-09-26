@@ -110,3 +110,20 @@ export function equalSplit(total: number, n: number): { base: number; extra: num
   const base = Math.floor(total / n);
   return { base, extra: total - base * n };
 }
+
+/** Tap a line: claim one portion, or let go of it entirely. */
+export function toggleClaim(claims: Claims, lineId: string): Claims {
+  const next = { ...claims };
+  if (next[lineId]) delete next[lineId];
+  else next[lineId] = 1;
+  return next;
+}
+
+/** The ×N stepper. Zero portions is no claim; 20 is the ceiling. */
+export function bumpClaim(claims: Claims, lineId: string, delta: number): Claims {
+  const next = { ...claims };
+  const v = (next[lineId] ?? 0) + delta;
+  if (v <= 0) delete next[lineId];
+  else next[lineId] = Math.min(v, 20);
+  return next;
+}

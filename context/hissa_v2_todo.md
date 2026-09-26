@@ -180,42 +180,42 @@ The execution list for `hissa_v2_plan.md`. Section numbers (§) refer to that pl
 ## Phase 5 — Pass the phone (§6)
 
 ### Code
-- [ ] Extract `ItemList` (rows, chips, the `×N` stepper on the active person) from `Split.tsx` into `src/ui.tsx` or `src/screens/ItemList.tsx`, then **rewire `Split.tsx` to it first**. The live split must look and behave identically before going further.
-- [ ] `src/lib/round.ts`:
-  - [ ] `Round = { meta: BillMeta; people: Person[]; turn: number | "tally"; splitUnclaimed: boolean; at }`
-  - [ ] `loadRound()` / `saveRound()` / `clearRound()` on `hissa:round`
-  - [ ] `dupes(names)` → indices whose normalised names collide
-- [ ] `Table.tsx`, entry no. 07 "who's at the table":
-  - [ ] the stepper and inputs are one list, minimum 1, no maximum
-  - [ ] row 1 prefilled with the stored name
-  - [ ] `+` appends an input and focuses it; Enter moves to the next input or appends one
-  - [ ] `−` removes the last input
-  - [ ] every name is required
-  - [ ] duplicates get the inline scrawl `two saras → add an initial` and block start
-  - [ ] the button reads `start → {first} goes first`
-- [ ] `Turn.tsx`, entry no. 08:
-  - [ ] handoff card `it's {name}'s turn` / `pass the phone to {name}` / `[ i'm {name} → ]` for everyone except person 1
-  - [ ] then `ItemList`, with earlier people's chips read-only
-  - [ ] bar: `{name}'s hissa Rs X` + `done → pass to {next}`; for the last person, `done → see the tally`
-  - [ ] back goes to the previous turn, or to entry 07 from person 1, keeping names and claims
-- [ ] `Tally.tsx`, entry no. 09:
-  - [ ] `who owes what` with palette dots
-  - [ ] `nobody's claimed` + `share leftovers` toggle
-  - [ ] `tap a name to redo their turn`, which reopens that turn with no handoff card and a bar reading `done → back to the tally`
+- [x] Extract `ItemList` (rows, chips, the `×N` stepper on the active person) from `Split.tsx` into `src/ui.tsx` or `src/screens/ItemList.tsx`, then **rewire `Split.tsx` to it first**. The live split must look and behave identically before going further.
+- [x] `src/lib/round.ts`:
+  - [x] `Round = { meta: BillMeta; people: Person[]; turn: number | "tally"; splitUnclaimed: boolean; at }`
+  - [x] `loadRound()` / `saveRound()` / `clearRound()` on `hissa:round` _no `clearRound`: a new round simply replaces the old one_
+  - [x] `dupes(names)` → indices whose normalised names collide
+- [x] `Table.tsx`, entry no. 07 "who's at the table":
+  - [x] the stepper and inputs are one list, minimum 1, no maximum
+  - [x] row 1 prefilled with the stored name
+  - [x] `+` appends an input and focuses it; Enter moves to the next input or appends one
+  - [x] `−` removes the last input
+  - [x] every name is required
+  - [x] duplicates get the inline scrawl `two saras → add an initial` and block start
+  - [x] the button reads `start → {first} goes first`
+- [x] `Turn.tsx`, entry no. 08:
+  - [x] handoff card `it's {name}'s turn` / `pass the phone to {name}` / `[ i'm {name} → ]` for everyone except person 1
+  - [x] then `ItemList`, with earlier people's chips read-only
+  - [x] bar: `{name}'s hissa Rs X` + `done → pass to {next}`; for the last person, `done → see the tally`
+  - [x] back goes to the previous turn, or to entry 07 from person 1, keeping names and claims
+- [x] `Tally.tsx`, entry no. 09:
+  - [x] `who owes what` with palette dots
+  - [x] `nobody's claimed` + `share leftovers` toggle
+  - [x] `tap a name to redo their turn`, which reopens that turn with no handoff card and a bar reading `done → back to the tally`
   - [ ] share block (Phase 6)
-- [ ] Save the round on every tap and every step.
-- [ ] Home: one stub `{billName} · {name}'s turn →` / `· tally →` next to `still open`, which resumes.
-- [ ] Starting a new round replaces the old one. Leaving the tally keeps the round until it's swept, so it can be re-shared.
-- [ ] Changing the table (entry 07) after claims exist: removing a person drops their claims, and renaming keeps them. Index people by position while on entry 07 and re-key on start.
+- [x] Save the round on every tap and every step.
+- [x] Home: one stub `{billName} · {name}'s turn →` / `· tally →` next to `still open`, which resumes.
+- [x] Starting a new round replaces the old one. Leaving the tally keeps the round until it's swept, so it can be re-shared.
+- [x] Changing the table (entry 07) after claims exist: removing a person drops their claims, and renaming keeps them. Index people by position while on entry 07 and re-key on start. _`seat()` carries claims by position_
 
 ### Unit tests
-- [ ] `dupes`: case, whitespace, and three-way collisions.
-- [ ] The tally equals `spread` + `shareOf` for fixed claims, and Σ shares = total when nothing's loose and leftovers are off (±n minor units of rounding, bounded by the number of people; assert that bound).
-- [ ] Leftovers on, with one person claiming nothing: that person pays 0.
-- [ ] `loadRound` on corrupt JSON returns null.
+- [x] `dupes`: case, whitespace, and three-way collisions.
+- [x] The tally equals `spread` + `shareOf` for fixed claims, and Σ shares = total when nothing's loose and leftovers are off (±n minor units of rounding, bounded by the number of people; assert that bound).
+- [x] Leftovers on, with one person claiming nothing: that person pays 0.
+- [x] `loadRound` on corrupt JSON returns null.
 
 ### Manual check
-- [ ] 3 people, including a shared plate with ×2 portions. Redo person 2. Reload mid-turn, resume from the home stub, and land on the same turn.
+- [x] 3 people, including a shared plate with ×2 portions. Redo person 2. Reload mid-turn, resume from the home stub, and land on the same turn. _done in Chrome: dupe blocked, handoff on turns 2-3 only, chips carried forward, redo, reload and resume from the stub, tally sum 3,074 = bill_
 
 - [ ] Commit: "Pass the phone".
 
