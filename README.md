@@ -1,7 +1,7 @@
 # Hissa
 
 Photograph a bill, tap what you ate, everyone sees their hissa.
-[Try it](https://hissa.itisamzia.dev) · [How it works, with diagrams](https://sif-zia.github.io/hissa/architecture.html)
+[Try it](https://hissa.itisamzia.dev) · [How it works, with diagrams](https://hissa.itisamzia.dev/architecture.html)
 
 Mobile-first PWA. No accounts, no login, no install. `context/hissa_spec.md` is
 the authoritative product spec; `CLAUDE.md` records the invariants that a
