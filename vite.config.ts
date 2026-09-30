@@ -51,7 +51,7 @@ export default defineConfig({
         navigateFallback: "/app.html",
         // Workbox matches pathname + search, so "/?about" needs its own allowance
         // or the service worker answers the landing page with the app shell.
-        navigateFallbackDenylist: [/^\/(\?.*)?$/, /^\/how-it-works/, /^\/api\//],
+        navigateFallbackDenylist: [/^\/(\?.*)?$/, /^\/how-it-works/, /^\/architecture/, /^\/api\//],
         // The landing pages stay network-first, so online nothing changes and
         // the SEO copy is always fresh. Offline they come from cache; "/" with
         // nothing cached falls back to the app shell rather than the
