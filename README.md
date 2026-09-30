@@ -1,6 +1,7 @@
 # Hissa
 
 Photograph a bill, tap what you ate, everyone sees their hissa.
+[Try it](https://hissa.itisamzia.dev) · [How it works, with diagrams](https://hissa.itisamzia.dev/architecture.html)
 
 Mobile-first PWA. No accounts, no login, no install. `context/hissa_spec.md` is
 the authoritative product spec; `CLAUDE.md` records the invariants that a
@@ -76,8 +77,6 @@ Upstash serves single commands at the REST root and batches at `/multi-exec`.
 `api/_lib/redis.ts` handles both; posting a batch to the root fails.
 
 ## How it fits together
-
-Diagrams of the request flows, Redis layout, service worker and update path, with a glossary: [sif-zia.github.io/hissa/architecture.html](https://hissa.itisamzia.dev/architecture.html).
 
 ```
 index.html, how-it-works.html   static — the entire SEO surface; one inline script (theme, returning-user redirect)
