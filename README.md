@@ -77,7 +77,7 @@ Upstash serves single commands at the REST root and batches at `/multi-exec`.
 
 ## How it fits together
 
-Diagrams of the request flows, Redis layout, service worker and update path, with a glossary: [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md).
+Diagrams of the request flows, Redis layout, service worker and update path, with a glossary: [`docs/architecture.html`](https://htmlpreview.github.io/?https://github.com/sif-zia/hissa/blob/master/docs/architecture.html).
 
 ```
 index.html, how-it-works.html   static — the entire SEO surface; one inline script (theme, returning-user redirect)
