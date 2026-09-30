@@ -23,6 +23,7 @@ export function Preview({
         title="is it readable?"
         note="every line and the totals should be in frame."
         error={error}
+        onBack={onRetake}
       />
 
       <figure class="sticky dogear" style={{ ...tiltStyle("prev", "note"), margin: 0, padding: 10 }}>
