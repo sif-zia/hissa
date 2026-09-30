@@ -1,0 +1,344 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1"><title>Hissa Architecture</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Caveat:wght@600;700&family=Literata:opsz,wght@7..72,400;7..72,600&family=Courier+Prime:wght@400;700&display=swap">
+<style>
+/* Layout: one column of figures, each under a handwritten heading and a short lead. Paper ground, ink strokes, four role hues. */
+:root{
+  --paper:#f3ecda; --card:#faf5e6; --ink:#2b2118; --mute:#6f624f; --rule:#c9bb9b;
+  --client:#2f5d9e; --edge:#2f7a4f; --redis:#b5432e; --ai:#7a4a9a;
+  --client-bg:#dfe7f2; --edge-bg:#dcecdf; --redis-bg:#f2dcd4; --ai-bg:#e9dff0;
+  --display:"Caveat","Bradley Hand",cursive; --body:"Literata",Georgia,serif; --mono:"Courier Prime","Courier New",monospace;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --paper:#1f1913; --card:#2a2219; --ink:#eee3cc; --mute:#a99b82; --rule:#544838;
+  --client:#7fa8e0; --edge:#6fc08d; --redis:#e8876f; --ai:#b98ad8;
+  --client-bg:#243246; --edge-bg:#21382a; --redis-bg:#46261f; --ai-bg:#35263f; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --paper:#1f1913; --card:#2a2219; --ink:#eee3cc; --mute:#a99b82; --rule:#544838;
+  --client:#7fa8e0; --edge:#6fc08d; --redis:#e8876f; --ai:#b98ad8;
+  --client-bg:#243246; --edge-bg:#21382a; --redis-bg:#46261f; --ai-bg:#35263f; color-scheme:dark}
+body{background:var(--paper);color:var(--ink);font-family:var(--body);line-height:1.6;padding-inline:16px;padding-block:32px 64px}
+main{max-width:920px;margin:0 auto;display:flex;flex-direction:column;gap:56px}
+h1,h2{font-family:var(--display);font-weight:700;line-height:1.05;text-wrap:balance;margin:0}
+h1{font-size:clamp(2.6rem,7vw,4rem)}
+h2{font-size:clamp(1.9rem,4.5vw,2.5rem);border-bottom:2px dashed var(--rule);padding-bottom:6px}
+p{margin:0;max-width:66ch}
+section{display:flex;flex-direction:column;gap:16px;min-width:0}
+.lede{font-size:1.1rem;color:var(--mute)}
+code,.m{font-family:var(--mono);font-size:.92em}
+.fig{background:var(--card);border:1px solid var(--rule);border-radius:4px;padding:16px;margin:0;box-shadow:3px 3px 0 var(--rule);min-width:0}
+.scroll{overflow-x:auto}
+.scroll>svg,.scroll>pre{min-width:640px}
+svg{display:block;width:100%;height:auto;color:var(--ink)}
+svg text{font-family:var(--mono);font-size:12.5px;fill:currentColor}
+svg .t{font-family:var(--display);font-size:20px;font-weight:700}
+svg .s{fill:var(--mute);font-size:11px}
+svg .box{stroke-width:1.8}
+svg .c{fill:var(--client-bg);stroke:var(--client)} svg .e{fill:var(--edge-bg);stroke:var(--edge)}
+svg .r{fill:var(--redis-bg);stroke:var(--redis)} svg .a{fill:var(--ai-bg);stroke:var(--ai)}
+svg .n{fill:none;stroke:var(--rule);stroke-dasharray:5 4;stroke-width:1.5}
+svg .ln{stroke:currentColor;stroke-width:1.6;fill:none}
+svg .dash{stroke-dasharray:5 4}
+figcaption{margin-top:12px;font-size:.92rem;color:var(--mute);max-width:70ch}
+.legend{display:flex;flex-wrap:wrap;gap:8px 20px;font-size:.9rem}
+.legend span::before{content:"";display:inline-block;width:12px;height:12px;border:2px solid;margin-right:6px;vertical-align:-1px}
+.l-c::before{background:var(--client-bg);border-color:var(--client)} .l-e::before{background:var(--edge-bg);border-color:var(--edge)}
+.l-r::before{background:var(--redis-bg);border-color:var(--redis)} .l-a::before{background:var(--ai-bg);border-color:var(--ai)}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:16px}
+.note{border-left:3px solid var(--rule);padding:2px 0 2px 14px}
+.note b{font-family:var(--display);font-size:1.3rem}
+table{border-collapse:collapse;width:100%;font-size:.93rem}
+th,td{text-align:left;padding:8px 10px;border-bottom:1px dashed var(--rule);vertical-align:top}
+th{font-family:var(--display);font-size:1.25rem}
+.yes{color:var(--edge);font-weight:600}.no{color:var(--redis);font-weight:600}
+pre.mermaid{background:transparent;margin:0;font-family:var(--mono)}
+.toc{display:flex;flex-wrap:wrap;gap:6px 18px;font-size:.95rem}
+.toc a{color:var(--client)}
+a.g{color:inherit;text-decoration:underline dotted var(--mute);text-underline-offset:3px}
+a.g:hover{text-decoration-color:var(--client);color:var(--client)}
+.toc a.more{color:var(--mute)}
+details#glossary{border-top:2px dashed var(--rule);padding-top:16px}
+details#glossary>summary{cursor:pointer;font-family:var(--display);font-size:1.6rem;font-weight:700;color:var(--mute)}
+details#glossary[open]>summary{color:var(--ink)}
+dl{display:grid;grid-template-columns:minmax(120px,190px) 1fr;gap:0;margin:16px 0 0;font-size:.93rem}
+dt,dd{padding:9px 10px;border-bottom:1px dashed var(--rule);margin:0}
+dt{font-family:var(--mono);font-weight:700;scroll-margin-top:16px}
+dt:target,dt:target+dd{background:var(--client-bg)}
+.gh{grid-column:1/-1;font-family:var(--display);font-size:1.3rem;font-weight:700;color:var(--mute);padding:16px 10px 4px;border-bottom:2px solid var(--rule)}
+@media(max-width:560px){dl{grid-template-columns:1fr}dt{border-bottom:0;padding-bottom:0}}
+a:focus-visible{outline:2px solid var(--client);outline-offset:2px}
+</style>
+
+</head>
+<body>
+<main>
+<header style="display:flex;flex-direction:column;gap:14px">
+  <h1>How Hissa fits together</h1>
+  <p class="lede">A static shell on a CDN, four small serverless functions, one Redis hash per bill, and a service worker that keeps the app alive on a phone. Nothing here holds a session, an account or a socket.</p>
+  <nav class="toc" aria-label="Sections">
+    <a href="#map">Architecture</a><a href="#split">Sharing a split</a><a href="#poll">Polling</a><a href="#photo">Reading a photo</a><a href="#pwa">On the phone</a><a href="#update">Updates</a><a href="#offline">Offline</a><a class="more" href="#glossary">Glossary</a>
+  </nav>
+</header>
+
+<section id="map">
+  <h2>The whole system</h2>
+  <p>Three things run in the phone: the page, a service worker between the page and the network, and <code>localStorage</code>. Everything that costs money or must be shared goes through <code>/api</code>. Redis is the only database, and the only thing Gemini ever sees is one resized photo.</p>
+  <div class="legend"><span class="l-c">phone</span><span class="l-e">Vercel</span><span class="l-r">Upstash Redis</span><span class="l-a">Google Gemini</span></div>
+  <figure class="fig"><div class="scroll">
+  <svg viewBox="0 0 900 470" role="img" aria-label="Phone talks to Vercel CDN for static files and to Vercel functions for the API; functions talk to Redis and Gemini">
+    <defs><marker id="ah" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" fill="currentColor"/></marker></defs>
+    <rect class="n" x="10" y="10" width="290" height="450" rx="6"/><text class="t" x="24" y="36">Phone</text>
+    <rect class="n" x="340" y="10" width="290" height="450" rx="6"/><text class="t" x="354" y="36">Vercel</text>
+    <rect class="n" x="670" y="10" width="220" height="450" rx="6"/><text class="t" x="684" y="36">Outside</text>
+
+    <rect class="box c" x="30" y="56" width="250" height="84" rx="4"/>
+    <text x="44" y="80" font-weight="700">Preact app</text><text class="s" x="44" y="98">app.html + hashed JS/CSS</text><text class="s" x="44" y="114">money maths runs here</text><text class="s" x="44" y="130">camera, editor, share card</text>
+    <rect class="box c" x="30" y="170" width="250" height="84" rx="4"/>
+    <text x="44" y="194" font-weight="700">Service worker</text><text class="s" x="44" y="212">precaches the app shell</text><text class="s" x="44" y="228">landing pages: network-first</text><text class="s" x="44" y="244">never touches /api</text>
+    <rect class="box c" x="30" y="284" width="250" height="84" rx="4"/>
+    <text x="44" y="308" font-weight="700">localStorage</text><text class="s" x="44" y="326">hissa:name, steps, round</text><text class="s" x="44" y="342">last-seen split, for stale-first paint</text>
+    <rect class="box c" x="30" y="398" width="250" height="44" rx="4"/>
+    <text x="44" y="418" font-weight="700">Device cookie</text><text class="s" x="44" y="433">HttpOnly, only sent to /api</text>
+
+    <rect class="box e" x="360" y="56" width="250" height="84" rx="4"/>
+    <text x="374" y="80" font-weight="700">CDN: static files</text><text class="s" x="374" y="98">/  /how-it-works  /app</text><text class="s" x="374" y="114">/s/:code rewrites to /app</text><text class="s" x="374" y="130">/assets immutable, 1 year</text>
+    <rect class="box e" x="360" y="190" width="250" height="110" rx="4"/>
+    <text x="374" y="214" font-weight="700">Edge functions</text><text class="s" x="374" y="232">POST /api/bill</text><text class="s" x="374" y="248">GET  /api/bill/:code</text><text class="s" x="374" y="264">POST /api/bill/:code/claims</text><text class="s" x="374" y="280">POST /api/bill/:code/meta</text>
+    <rect class="box e" x="360" y="330" width="250" height="112" rx="4"/>
+    <text x="374" y="354" font-weight="700">Node functions</text><text class="s" x="374" y="372">POST /api/extract</text><text class="s" x="374" y="388">up to 60s, for slow reads</text><text class="s" x="374" y="404">GET  /api/usage</text><text class="s" x="374" y="420">read count, no spend</text>
+
+    <rect class="box r" x="690" y="190" width="180" height="110" rx="4"/>
+    <text x="704" y="214" font-weight="700">Upstash Redis</text><text class="s" x="704" y="232">bill:CODE (hash)</text><text class="s" x="704" y="248">use:… counters</text><text class="s" x="704" y="264">TTL 24 hours</text><text class="s" x="704" y="280">HTTP, no connections</text>
+    <rect class="box a" x="690" y="350" width="180" height="70" rx="4"/>
+    <text x="704" y="374" font-weight="700">Gemini Flash</text><text class="s" x="704" y="392">photo in, JSON out</text><text class="s" x="704" y="408">key lives server-side</text>
+
+    <line class="ln" x1="280" y1="98" x2="358" y2="98" marker-end="url(#ah)"/><text class="s" x="290" y="90">HTML, JS</text>
+    <line class="ln dash" x1="155" y1="140" x2="155" y2="168" marker-end="url(#ah)"/>
+    <line class="ln" x1="280" y1="245" x2="358" y2="245" marker-start="url(#ah)" marker-end="url(#ah)"/><text class="s" x="290" y="237">fetch</text>
+    <path class="ln" d="M280 380 L320 380 L320 386 L358 386" marker-end="url(#ah)"/><text class="s" x="290" y="372">photo</text>
+    <line class="ln" x1="610" y1="245" x2="688" y2="245" marker-start="url(#ah)" marker-end="url(#ah)"/><text class="s" x="618" y="237">HSET/HGETALL</text>
+    <path class="ln" d="M610 372 L650 372 L650 290 L688 290" marker-end="url(#ah)"/><text class="s" x="618" y="326">INCR</text>
+    <line class="ln" x1="610" y1="385" x2="688" y2="385" marker-end="url(#ah)"/><text class="s" x="624" y="378">photo</text>
+  </svg></div>
+  <figcaption>The phone reaches Vercel through two doors: the CDN for files, and <code>/api</code> for data. Only the Node function can reach Gemini, and it also counts reads in Redis before it spends one.</figcaption></figure>
+  <div class="grid">
+    <div class="note"><b>Why polling, not sockets</b><br>The spec asked for a Durable Object and WebSockets. The build uses <a class="g" href="#g-etag">ETag</a>-gated <a class="g" href="#g-polling">polling</a> on serverless, which needs no long-lived connection and costs one tiny Redis read when nothing changed.</div>
+    <div class="note"><b>Why two runtimes</b><br>Bill endpoints are short and run as <a class="g" href="#g-edge">edge functions</a>. A Gemini read can take longer than Edge's 25s first-byte limit, so <code>/api/extract</code> runs as a <a class="g" href="#g-node">Node function</a> with a 60s budget.</div>
+    <div class="note"><b>Why no accounts</b><br>A person is a normalised name inside one split. Rejoining from a second phone is typing the same name.</div>
+  </div>
+</section>
+
+<section id="split">
+  <h2>Starting and joining a split</h2>
+  <p>The initiator writes the bill once. After that, each person writes only their own field, so eight people tapping at once never write the same thing. Every write bumps a <a class="g" href="#g-v">version counter</a> in the same <a class="g" href="#g-multi">transaction</a>.</p>
+  <figure class="fig"><div class="scroll">
+<pre class="mermaid">
+sequenceDiagram
+  autonumber
+  participant A as Initiator phone
+  participant F as Edge function
+  participant R as Redis bill:K7QM
+  participant B as Friend phone
+  A->>F: POST /api/bill with lines, totals, own name
+  F->>R: MULTI: HSET meta and c:asha, HSET v 1, EXPIRE 24h
+  F-->>A: 201 code K7QM, ETag 1
+  A->>B: share link hissa/s/K7QM
+  B->>F: GET /api/bill/K7QM
+  F->>R: HGETALL
+  F-->>B: meta plus every person's claims, ETag N
+  Note over B: read own claims first, then register, so joining never erases a tap
+  B->>F: POST claims for faraz, line 3 portions 1
+  F->>R: MULTI: HSET c:faraz, HINCRBY v 1, EXPIRE 24h
+  F-->>B: ok, ETag N+1
+</pre></div>
+  <figcaption>A link like <code>/s/K7QM</code> is rewritten by Vercel to <code>/app</code>, so the code survives in the URL and the app reads it. The code is 4 characters from an alphabet without I, O, 0 and 1.</figcaption></figure>
+</section>
+
+<section id="poll">
+  <h2>Keeping everyone's numbers current</h2>
+  <p>Each phone asks "has anything changed?" every 5 seconds for the first hour, sending the <a class="g" href="#g-etag">ETag</a> it already holds (<a class="g" href="#g-inm">If-None-Match</a>). When the answer is a <a class="g" href="#g-304">304</a> there is no body and no re-render. After the hour it stops and waits for a manual refresh.</p>
+  <figure class="fig"><div class="scroll">
+<pre class="mermaid">
+sequenceDiagram
+  participant P as Phone
+  participant L as localStorage
+  participant F as Edge function
+  participant R as Redis
+  P->>L: open the split, paint last-seen numbers at once
+  loop every 5s while the split is under an hour old
+    P->>F: GET /api/bill/K7QM, If-None-Match N
+    F->>R: HGETALL
+    alt version still N
+      F-->>P: 304, empty body
+    else someone tapped
+      F-->>P: 200 full state, ETag N+1
+      P->>L: save, then re-render totals
+    end
+  end
+  Note over P,F: on failure the delay doubles up to 60s
+</pre></div>
+  <figcaption>Redis holds one <a class="g" href="#g-hash">hash</a> per bill with a <a class="g" href="#g-v"><code>v</code> counter</a> that doubles as the <a class="g" href="#g-etag">ETag</a>. <a class="g" href="#g-stale">Stale-first paint</a> means a reload shows numbers immediately, then corrects them when the first poll answers.</figcaption></figure>
+  <figure class="fig"><div class="scroll">
+  <svg viewBox="0 0 860 210" role="img" aria-label="One Redis hash per bill: meta field, one claims field per person, and a version counter">
+    <rect class="box r" x="20" y="20" width="820" height="170" rx="4"/>
+    <text class="t" x="36" y="48">bill:K7QM</text><text class="s" x="170" y="46">one Redis hash, TTL 24h, refreshed on every write</text>
+    <rect class="box r" x="36" y="68" width="230" height="100" rx="3"/><text x="50" y="92" font-weight="700">meta</text><text class="s" x="50" y="110">frozen lines {id,name,qty,amt}</text><text class="s" x="50" y="126">totals, extras, leftovers toggle</text><text class="s" x="50" y="142">written once by the initiator</text>
+    <rect class="box r" x="288" y="68" width="110" height="100" rx="3"/><text x="300" y="92" font-weight="700">c:asha</text><text class="s" x="300" y="112">{line: portions}</text><text class="s" x="300" y="128">asha writes</text><text class="s" x="300" y="144">only this</text>
+    <rect class="box r" x="410" y="68" width="110" height="100" rx="3"/><text x="422" y="92" font-weight="700">c:faraz</text><text class="s" x="422" y="112">{line: portions}</text><text class="s" x="422" y="128">faraz writes</text><text class="s" x="422" y="144">only this</text>
+    <rect class="box r" x="532" y="68" width="110" height="100" rx="3"/><text x="544" y="92" font-weight="700">c:…</text><text class="s" x="544" y="112">one per person</text><text class="s" x="544" y="128">key = lowercased</text><text class="s" x="544" y="144">trimmed name</text>
+    <rect class="box r" x="664" y="68" width="160" height="100" rx="3"/><text x="678" y="92" font-weight="700">v</text><text class="s" x="678" y="112">HINCRBY on every write</text><text class="s" x="678" y="128">sent back as ETag</text><text class="s" x="678" y="144">that is the whole sync</text>
+  </svg></div>
+  <figcaption>No two people share a field, so writes never conflict. The client does the maths: a line's amount is divided by portions claimed, and the last claimer absorbs the rounding.</figcaption></figure>
+</section>
+
+<section id="photo">
+  <h2>Reading a bill from a photo</h2>
+  <p>The shutter draws the video frame to a canvas and encodes JPEG directly, so the frame never becomes a file. The image is resized to 1,400 px and sent once. The server counts the read <em>before</em> paying for it.</p>
+  <figure class="fig"><div class="scroll">
+<pre class="mermaid">
+sequenceDiagram
+  participant P as Phone
+  participant U as /api/usage
+  participant X as /api/extract
+  participant R as Redis
+  participant G as Gemini
+  P->>U: take a pic tapped, any reads left?
+  U->>R: GET counters, no spend
+  U-->>P: 3 remaining
+  Note over P: open camera, shutter, canvas to JPEG 0.75
+  P->>X: POST photo plus device cookie
+  X->>R: INCR device, INCR network, INCR global
+  alt over 5 per device, 30 per network, or 500 per day
+    X->>R: DECR, hand the read back
+    X-->>P: 429 refused
+  else allowed
+    X->>G: photo plus responseSchema
+    alt Gemini fails
+      X->>R: DECR, hand the read back
+      X-->>P: error, photo stays on the preview
+    else ok
+      G-->>X: lines, extras with rate, amount, step, printed total
+      X-->>P: JSON
+      Note over P: detect tries each stacking and keeps the one that matches the printed total
+      Note over P: review screen always shown, photo never stored
+    end
+  end
+</pre></div>
+  <figcaption>The usage check is advice that saves a wasted camera session; the <a class="g" href="#g-incr"><code>INCR</code></a> in <code>/api/extract</code> is the gate. If Redis is down, reads are allowed through, because reading bills is the product.</figcaption></figure>
+</section>
+
+<section id="pwa">
+  <h2>How the app lives on a phone</h2>
+  <p>There is no install step from a store. The browser turns the site into an app once it sees the <a class="g" href="#g-manifest">manifest</a> and a <a class="g" href="#g-sw">service worker</a>. After that the launcher icon opens a full-screen window on <code>/app.html</code>, and the shell loads from the phone's own cache.</p>
+  <figure class="fig"><div class="scroll">
+  <svg viewBox="0 0 900 330" role="img" aria-label="Three caches on the phone: precache for the app shell, runtime cache for landing pages, localStorage for state; the network is only needed for API calls">
+    <defs><marker id="ah2" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" fill="currentColor"/></marker></defs>
+    <rect class="box c" x="20" y="20" width="170" height="70" rx="4"/><text x="34" y="46" font-weight="700">Home-screen icon</text><text class="s" x="34" y="64">manifest: standalone</text><text class="s" x="34" y="78">start_url /app.html</text>
+    <rect class="box c" x="250" y="20" width="200" height="70" rx="4"/><text x="264" y="46" font-weight="700">Service worker</text><text class="s" x="264" y="64">scope /, answers every</text><text class="s" x="264" y="78">navigation and asset fetch</text>
+    <line class="ln" x1="190" y1="55" x2="248" y2="55" marker-end="url(#ah2)"/><text class="s" x="194" y="47">launch</text>
+
+    <rect class="box c" x="20" y="150" width="240" height="150" rx="4"/><text x="34" y="176" font-weight="700">Precache</text><text class="s" x="34" y="196">app.html, JS, CSS, fonts</text><text class="s" x="34" y="212">icons, favicon</text><text class="s" x="34" y="232">filled at install</text><text class="s" x="34" y="248">versioned by content hash</text><text class="s" x="34" y="270">cache first: opens offline</text>
+    <rect class="box c" x="330" y="150" width="240" height="150" rx="4"/><text x="344" y="176" font-weight="700">Landing cache</text><text class="s" x="344" y="196">/ and /how-it-works</text><text class="s" x="344" y="216">network first, 4s timeout</text><text class="s" x="344" y="232">falls back to cache</text><text class="s" x="344" y="248">/ with nothing cached</text><text class="s" x="344" y="264">falls back to the app shell</text>
+    <rect class="box e" x="640" y="150" width="240" height="150" rx="4"/><text x="654" y="176" font-weight="700">Network</text><text class="s" x="654" y="196">/api/* always goes here</text><text class="s" x="654" y="212">excluded from the fallback</text><text class="s" x="654" y="232">photo reads, live splits,</text><text class="s" x="654" y="248">joining a link need it</text><text class="s" x="654" y="270">fetch failure: OFFLINE error</text>
+    <line class="ln" x1="300" y1="90" x2="140" y2="148" marker-end="url(#ah2)"/><text class="s" x="170" y="112">app shell</text>
+    <line class="ln" x1="390" y1="90" x2="440" y2="148" marker-end="url(#ah2)"/><text class="s" x="420" y="116">landing</text>
+    <path class="ln dash" d="M450 55 L760 55 L760 148" marker-end="url(#ah2)"/><text class="s" x="560" y="47">/api: passes straight through</text>
+  </svg></div>
+  <figcaption>The landing pages are deliberately not <a class="g" href="#g-precache">precached</a>, so the search-facing copy is always fresh and an installed app does not carry marketing HTML. The manual-entry flow, equal split, pass the phone and share card need none of the network.</figcaption></figure>
+</section>
+
+<section id="update">
+  <h2>How an update reaches a phone</h2>
+  <p>Shipping is <code>git push</code> to Vercel. The phone finds out the next time it opens the app, because the browser re-fetches <code>/sw.js</code> on launch and compares bytes. A new build changes the <a class="g" href="#g-precache">precache</a> list, so the file differs.</p>
+  <figure class="fig"><div class="scroll">
+<pre class="mermaid">
+sequenceDiagram
+  participant D as You
+  participant V as Vercel
+  participant S as Service worker on phone
+  participant P as Open app page
+  D->>V: git push, pnpm build
+  Note over V: new hashed JS and CSS, new sw.js with new precache list
+  Note over S,P: phone keeps serving the old shell meanwhile
+  P->>V: next launch, browser re-fetches /sw.js
+  V-->>S: bytes differ, install new worker
+  S->>V: download only changed assets into a fresh precache
+  Note over S: autoUpdate, so skip waiting and claim clients
+  S->>S: activate, delete old precache
+  P->>S: next navigation gets the new app.html
+  Note over P: this launch still runs old JS, the next one runs new
+</pre></div>
+  <figcaption>Hashed assets are cached for a year because a changed file gets a new name. Old and new JS never mix: a page runs entirely from the build it was loaded with, and the new worker owns the next load. Registration is a plain <code>navigator.serviceWorker.register</code> call, so the running page is not force-reloaded.</figcaption></figure>
+  <div class="grid">
+    <div class="note"><b>API compatibility</b><br>A phone can run an old shell against the new API for one launch. That is why the response still carries v1's <code>gstPct</code>, <code>discount</code> and <code>tip</code> for installed v1 apps.</div>
+    <div class="note"><b>Stored data</b><br><code>hissa:name</code> and settings have no timestamp and stay. A sweep deletes any other <code>hissa:*</code> value a day old, matching the server's 24-hour TTL.</div>
+    <div class="note"><b>Forcing it</b><br>Close the app fully and reopen it. Launch is the update check. There is no version banner.</div>
+  </div>
+</section>
+
+<section id="offline">
+  <h2>What works without a connection</h2>
+  <figure class="fig scroll">
+  <table>
+    <thead><tr><th>Feature</th><th>Offline</th><th>Why</th></tr></thead>
+    <tbody>
+      <tr><td>Open the app</td><td class="yes">works</td><td>Shell is in the precache.</td></tr>
+      <tr><td>Enter a bill by hand</td><td class="yes">works</td><td>Maths is client-side.</td></tr>
+      <tr><td>Equal split, pass the phone</td><td class="yes">works</td><td>State is in <code>localStorage</code>; never touches the server.</td></tr>
+      <tr><td>Copy or share card</td><td class="yes">works</td><td>Card is drawn on a canvas.</td></tr>
+      <tr><td>Read a photo</td><td class="no">needs network</td><td>Gemini call. The photo stays on the preview for a retry.</td></tr>
+      <tr><td>Live link split, joining</td><td class="no">needs network</td><td>State is in Redis. The app says so before you try and offers manual entry.</td></tr>
+    </tbody>
+  </table></figure>
+</section>
+
+<details id="glossary">
+  <summary>Glossary: Redis, HTTP and PWA terms</summary>
+  <dl>
+    <div class="gh">Redis</div>
+    <dt id="g-hash">hash</dt><dd>A Redis key that holds named fields, like a small object. Each bill is one hash, <code>bill:K7QM</code>, with fields <code>meta</code>, <code>c:asha</code>, <code>c:faraz</code> and <code>v</code>.</dd>
+    <dt id="g-hset">HSET</dt><dd><code>HSET key field value</code> sets one field of a hash. <code>HSET bill:K7QM c:faraz {…}</code> saves Faraz's claims and touches nobody else's.</dd>
+    <dt id="g-hgetall">HGETALL</dt><dd>Reads every field of a hash in one call. One <code>HGETALL</code> returns the meta, everyone's claims and the version.</dd>
+    <dt id="g-hincrby">HINCRBY</dt><dd><code>HINCRBY key field 1</code> adds 1 to a numeric field. Used to bump <code>v</code> on every write.</dd>
+    <dt id="g-incr">INCR / DECR</dt><dd>Add or subtract 1 from a counter. <code>/api/extract</code> does <code>INCR</code> before calling Gemini and <code>DECR</code> to hand the read back if it is refused or fails.</dd>
+    <dt id="g-expire">EXPIRE / TTL</dt><dd><code>EXPIRE key 86400</code> deletes the whole key after 86,400 seconds. TTL is that time to live. Every write resets it, so a bill lives 24 hours after its last tap.</dd>
+    <dt id="g-multi">MULTI … EXEC</dt><dd>Runs the commands between them as one all-or-nothing batch. A write does three things (save the claim, bump <code>v</code>, reset the expiry), and without a batch a failure between steps could save the claim without bumping <code>v</code>, so other phones would never see it.</dd>
+    <dt id="g-v">v (version)</dt><dd>A number in the hash that goes up by one on every write. It is the only thing the polling check compares, and it is sent to the phone as the ETag.</dd>
+    <div class="gh">HTTP</div>
+    <dt id="g-etag">ETag</dt><dd>A label the server puts on a response to identify that exact version of the data. Hissa uses <code>v</code>: <code>ETag: "7"</code>.</dd>
+    <dt id="g-inm">If-None-Match</dt><dd>The phone sends its last ETag back: "give me the bill only if it is not version 7." <code>N</code> in the diagrams means whatever version the phone last saw.</dd>
+    <dt id="g-304">304 Not Modified</dt><dd>The reply when the version still matches. No body, so it is tiny. A changed version gets a <code>200</code> with the full bill and the new ETag.</dd>
+    <dt id="g-polling">polling</dt><dd>Asking the server on a timer instead of holding a connection open. Hissa asks every 5 seconds for the first hour, and doubles the wait up to 60s after a failure.</dd>
+    <dt id="g-stale">stale-first paint</dt><dd>Drawing the last numbers saved in <code>localStorage</code> immediately, then correcting them when the first poll answers.</dd>
+    <dt id="g-edge">edge function</dt><dd>A short serverless function on Vercel's edge runtime, close to the user, built on Web APIs only. Must send a first byte within 25 seconds. Used for the bill endpoints.</dd>
+    <dt id="g-node">Node function</dt><dd>A serverless function on the full Node.js runtime. Hissa's <code>/api/extract</code> uses it with a 60-second limit, for slow Gemini reads.</dd>
+    <div class="gh">PWA</div>
+    <dt id="g-sw">service worker</dt><dd>A script the browser runs in the background between the page and the network. It can answer requests from a cache, which is why the app opens offline. It has no access to the page itself.</dd>
+    <dt id="g-precache">precache</dt><dd>Files the service worker downloads at install, before they are asked for: the app shell, JS, CSS, fonts and icons. Names carry a content hash, so a changed file is a new entry.</dd>
+    <dt id="g-manifest">manifest</dt><dd>A JSON file that tells the browser the app's name, icons, colors and start URL, so it can be added to the home screen and open full-screen.</dd>
+  </dl>
+</details>
+</main>
+
+<script>
+// Opening a glossary link expands the collapsed glossary first, then jumps to the term.
+function openGlossary(){
+  var h=location.hash;
+  if(h.indexOf("#g-")!==0&&h!=="#glossary")return;
+  var d=document.getElementById("glossary");if(d)d.open=true;
+  var t=document.getElementById(h.slice(1));
+  if(t)requestAnimationFrame(function(){t.scrollIntoView({block:"center"})});
+}
+addEventListener("hashchange",openGlossary);openGlossary();
+</script>
+<script type="module">
+  // The artifact host renders mermaid itself; a standalone file has to load it.
+  import mermaid from "https://cdn.jsdelivr.net/npm/mermaid@11.4.0/dist/mermaid.esm.min.mjs";
+  var dark = matchMedia("(prefers-color-scheme: dark)").matches;
+  mermaid.initialize({ startOnLoad: true, theme: dark ? "dark" : "neutral", fontFamily: "Courier Prime, Courier New, monospace" });
+</script>
+</body>
+</html>
