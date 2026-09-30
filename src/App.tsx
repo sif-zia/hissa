@@ -43,7 +43,24 @@ export function App() {
   const [onSplit, params] = useRoute("/s/:code");
   const code = onSplit ? (params?.code ?? "").toUpperCase() : null;
 
-  const [screen, setScreen] = useState<Screen>("home");
+  const [screen, setScreenRaw] = useState<Screen>("home");
+  const screenRef = useRef(screen);
+  screenRef.current = screen;
+  /**
+   * Every step is a history entry (`{ s, d }`: screen and depth from home), so
+   * the browser's back walks the flow one step at a time. Home replaces
+   * rather than pushes; depth lets `goHome` unwind the whole stack.
+   */
+  const depth = () => (history.state?.d as number | undefined) ?? 0;
+  const setScreen = (s: Screen) => {
+    if (s === screenRef.current) return;
+    screenRef.current = s;
+    setScreenRaw(s);
+    if (s === "home") history.replaceState({ s, d: depth() }, "");
+    else history.pushState({ s, d: depth() + 1 }, "");
+  };
+  /** One step back, wherever we are. */
+  const back = () => (depth() > 0 ? history.back() : goHome());
   const [bill, setBill] = useState<DraftBill | null>(null);
   const [shot, setShot] = useState<Shot | null>(null);
   const [suspect, setSuspect] = useState(false);
@@ -197,7 +214,11 @@ export function App() {
       adopted.current = who.key;
       setMe(who);
       setMine({});
-      navigate(`/s/${out.meta.code}`);
+      // Replace the chooser's entry so back from the split lands on home.
+      const keep = { s: "home", d: depth() };
+      setScreenRaw("home"); screenRef.current = "home";
+      navigate(`/s/${out.meta.code}`, { replace: true });
+      history.replaceState(keep, "");
       const how = await share(out.meta.code, out.meta.billName);
       flash(how === "copied" ? `invite copied · ${out.meta.code}` : `your code is ${out.meta.code}`);
     } catch (e) {
@@ -341,12 +362,59 @@ export function App() {
     });
   };
 
-  const goHome = () => {
+  const resetFlow = () => {
     setBill(null); setShot(null); setErr(""); setSuspect(false); setPlace("");
     setBillName(""); setJoinCode(""); setJoinName(null);
-    setScreen("home");
-    navigate("/");
   };
+  const goHome = () => {
+    resetFlow();
+    setScreen("home");
+    const d = depth();
+    if (d > 0) history.go(-d); // unwind the stack to the first entry
+    else navigate("/");
+  };
+  const turnBack = () => {
+    if (!round) return;
+    const i = round.turn as number;
+    if (round.redo) { setRound({ ...round, turn: "tally", redo: false }); back(); }
+    else if (i > 0) setRound({ ...round, turn: i - 1 });
+    else { setSeatNames(round.people.map((p) => p.name)); setReseat(true); back(); }
+  };
+
+  /* Browser / hardware back: follow the history entry we land on. */
+  const live = useRef({ bill, shot, round, code, turnBack });
+  live.current = { bill, shot, round, code, turnBack };
+  useEffect(() => {
+    history.replaceState({ s: "home", d: 0 }, "");
+    const onPop = () => {
+      const { bill, shot, round, code, turnBack } = live.current;
+      const st = history.state as { s?: Screen; d?: number } | null;
+      const d = st?.d ?? 0;
+      // Left a live split: skip the flow steps underneath, straight home.
+      if (code && !location.pathname.startsWith("/s/")) {
+        resetFlow();
+        if (d > 0) history.go(-d);
+        else setScreenRaw("home");
+        return;
+      }
+      if (screenRef.current === "turn" && round && !round.redo && (round.turn as number) > 0) {
+        history.pushState({ s: "turn", d: d + 1 }, ""); // stay on the turn; step to the previous person
+        turnBack();
+        return;
+      }
+      let s: Screen = st?.s ?? "home";
+      const gone =
+        (["editor", "equal", "choose"].includes(s) && !bill) ||
+        (s === "preview" && !shot) ||
+        (["table", "turn", "tally"].includes(s) && !round);
+      if (gone) s = "home";
+      screenRef.current = s;
+      setScreenRaw(s);
+    };
+    window.addEventListener("popstate", onPop);
+    return () => window.removeEventListener("popstate", onPop);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   /* --- render ------------------------------------------------------------ */
 
@@ -439,7 +507,7 @@ export function App() {
                 setLimitMsg(limitMessage(u));
                 setNeedsNet("limit");
                 // Only pull them out of the viewfinder, never out of a photo.
-                setScreen((s) => (s === "camera" ? "home" : s));
+                if (screenRef.current === "camera") back();
               },
               () => {
                 // Couldn't ask. Go by what we knew; /api/extract decides anyway.
@@ -476,7 +544,7 @@ export function App() {
       {screen === "camera" && (
         <Capture
           onShot={(s) => { setShot(s); setErr(""); setScreen("preview"); }}
-          onBack={goHome}
+          onBack={back}
           error={err}
           setError={setErr}
         />
@@ -487,7 +555,7 @@ export function App() {
           shot={shot}
           reading={busy}
           onNext={readShot}
-          onRetake={() => { setShot(null); setErr(""); setScreen("camera"); }}
+          onRetake={() => { setShot(null); setErr(""); back(); }}
           onManual={() => { setShot(null); setErr(""); setBill(blank()); setScreen("editor"); }}
           error={err}
         />
@@ -506,7 +574,7 @@ export function App() {
             setBillName(place || dayMeal());
             setScreen("choose");
           }}
-          onBack={goHome}
+          onBack={back}
         />
       )}
 
@@ -516,7 +584,7 @@ export function App() {
           currency={bill.currency}
           heads={heads}
           setHeads={setHeads}
-          onBack={() => setScreen("editor")}
+          onBack={back}
           flash={flash}
         />
       )}
@@ -528,7 +596,7 @@ export function App() {
           onLink={openSplit}
           online={online}
           onPhone={() => { setErr(""); setSeatNames([myName]); setReseat(false); setScreen("table"); }}
-          onBack={() => setScreen("editor")}
+          onBack={back}
           busy={busy} error={err}
         />
       )}
@@ -537,7 +605,7 @@ export function App() {
         <Table
           initial={seatNames}
           onStart={startRound}
-          onBack={() => setScreen(reseat ? "turn" : "choose")}
+          onBack={() => (reseat ? setScreen("turn") : back())}
         />
       )}
 
@@ -555,12 +623,7 @@ export function App() {
             window.scrollTo(0, 0);
             if (end) setScreen("tally");
           }}
-          onBack={() => {
-            const i = round.turn as number;
-            if (round.redo) { setRound({ ...round, turn: "tally", redo: false }); setScreen("tally"); }
-            else if (i > 0) setRound({ ...round, turn: i - 1 });
-            else { setSeatNames(round.people.map((p) => p.name)); setReseat(true); setScreen("table"); }
-          }}
+          onBack={turnBack}
         />
       )}
 

@@ -19,6 +19,7 @@ export function Capture({
 }) {
   const { videoRef, camState, stop, caps, focusAt, setTorch } = useCamera(true);
   const fileRef = useRef<HTMLInputElement | null>(null);
+  const galleryRef = useRef<HTMLInputElement | null>(null);
   const [torch, setTorchOn] = useState(false);
   const [ring, setRing] = useState<{ x: number; y: number; n: number } | null>(null);
 
@@ -68,7 +69,9 @@ export function Capture({
   };
 
   const pick = async (e: Event) => {
-    const file = (e.target as HTMLInputElement).files?.[0];
+    const input = e.target as HTMLInputElement;
+    const file = input.files?.[0];
+    input.value = ""; // the same photo can be picked twice
     if (!file) return;
     try {
       stop();
@@ -78,15 +81,12 @@ export function Capture({
     }
   };
 
+  // "upload" opens the gallery; only the blocked-camera fallback opens the camera app.
   const picker = (
-    <input
-      ref={fileRef}
-      type="file"
-      accept="image/*"
-      capture="environment"
-      onChange={pick}
-      class="sr-only"
-    />
+    <>
+      <input ref={galleryRef} type="file" accept="image/*" onChange={pick} class="sr-only" />
+      <input ref={fileRef} type="file" accept="image/*" capture="environment" onChange={pick} class="sr-only" />
+    </>
   );
 
   if (!blocked) {
@@ -149,7 +149,7 @@ export function Capture({
         {error ? <p class="sticky scrawl cam-err" role="alert">{error}</p> : null}
 
         <div class="cam-bottom">
-          <button class="stub cam-btn" onClick={() => fileRef.current?.click()}>
+          <button class="stub cam-btn" onClick={() => galleryRef.current?.click()}>
             <svg width="16" height="16" viewBox="0 0 24 24" aria-hidden="true">
               <path d="M12 15.5V4.2M7.4 8.6 12 4l4.6 4.6M4.6 14.8v5h14.8v-5" />
             </svg>
