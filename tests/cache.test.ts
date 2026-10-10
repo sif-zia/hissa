@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
 import { readFileSync } from "node:fs";
 import { fakeStorage } from "./storage";
-import { loadName, saveName, savePref, loadPref, sweep } from "../src/lib/cache";
+import { loadName, saveName, loadBank, saveBank, savePref, loadPref, sweep } from "../src/lib/cache";
 
 beforeEach(() => { vi.stubGlobal("localStorage", fakeStorage()); });
 afterEach(() => { vi.unstubAllGlobals(); vi.useRealTimers(); });
@@ -19,12 +19,14 @@ describe("device preferences", () => {
     saveName("Faraz");
     savePref("steps", [["gst"], ["discount", "tip"]]);
     savePref("withItems", true);
+    saveBank("meezan\nPK00 MEZN 0001  ");
     vi.useFakeTimers();
     vi.setSystemTime(Date.now() + 25 * 3600_000);
     sweep();
     expect(loadName()).toBe("Faraz");
     expect(loadPref("steps")).toEqual([["gst"], ["discount", "tip"]]);
     expect(loadPref("withItems")).toBe(true);
+    expect(loadBank()).toBe("meezan\nPK00 MEZN 0001");
   });
 
   it("still sweeps things that do carry an `at`", () => {

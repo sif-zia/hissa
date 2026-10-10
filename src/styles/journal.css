@@ -411,6 +411,7 @@ button, input, select, textarea { font: inherit; color: inherit; }
 .write:focus { outline: none; border-bottom-color: var(--rose); border-bottom-style: solid; }
 .write::placeholder { color: var(--ink-3); opacity: 0.75; }
 .write.amt { font-family: var(--ledger); text-align: right; }
+textarea.write { resize: vertical; line-height: 1.4; display: block; }
 
 /* Focus that survives the aesthetic. */
 :where(button, input, a, [tabindex]):focus-visible {
@@ -559,6 +560,10 @@ button, input, select, textarea { font: inherit; color: inherit; }
 /* The list is ruled off as a block, so the last row does not need
    its own line under it. */
 .item:last-child { border-bottom: none; }
+/* A tally row with its items under it: the line goes under both. */
+.person { border-bottom: 1.5px dashed var(--ink-line); }
+.person:last-child { border-bottom: none; }
+.person > .item { border-bottom: none; }
 
 /*
  * The portion stepper. Drawn small so the chip stays a chip, but its hit area
@@ -610,11 +615,15 @@ button, input, select, textarea { font: inherit; color: inherit; }
   background: none;
   color: var(--ink-3);
   font-family: var(--ledger);
-  font-size: 1.05rem;
+  font-size: 1.6rem;
   line-height: 1;
-  padding: 6px 4px;
+  min-width: 32px;
+  min-height: 32px;
+  padding: 2px 4px;
   cursor: pointer;
 }
+.add-extras { display: flex; flex-wrap: wrap; gap: 4px 14px; margin: 0; }
+.add-extras .link { font-size: 1.05em; }
 .scratch:hover:not(:disabled) { color: var(--warn); }
 .scratch:disabled { opacity: 0.25; cursor: default; }
 
@@ -896,3 +905,21 @@ button, input, select, textarea { font: inherit; color: inherit; }
 }
 .check-box svg { width: 20px; height: 20px; fill: none; stroke: var(--rose); stroke-width: 3; stroke-linecap: round; stroke-linejoin: round; }
 .check input:focus-visible + .check-box { outline: 2.5px solid var(--slate); outline-offset: 2px; }
+
+/* ------------------------------------------------------------- reveal */
+
+/* Height from 0 to auto without measuring: a one-row grid animating 0fr → 1fr. */
+.reveal {
+  display: grid;
+  grid-template-rows: 0fr;
+  opacity: 0;
+  transition: grid-template-rows 0.28s ease, opacity 0.22s ease;
+}
+.reveal.open { grid-template-rows: 1fr; opacity: 1; }
+.reveal > div { overflow: hidden; min-height: 0; }
+
+.person-items { list-style: none; margin: 0; padding: 0 0 6px 17px; }
+.person-items li { padding: 2px 0; font-size: 0.95rem; }
+
+.pay-note { padding: 14px 0 2px; }
+.pay-note p { margin: 4px 0 0; white-space: pre-line; font-family: var(--ledger); overflow-wrap: anywhere; }

@@ -81,6 +81,15 @@ describe("summaryText", () => {
   });
 });
 
+describe("bank details", () => {
+  it("go under everything, line for line", () => {
+    const s = { ...equalSummary(300, 3, "Rs", 0), pay: "meezan\nPK00 MEZN 0001" };
+    expect(summaryText(s, "x").split("\n").slice(-7)).toEqual([
+      "total Rs 3.00", "", "send your share to:", "meezan", "PK00 MEZN 0001", "", "split with hissa · x",
+    ]);
+  });
+});
+
 describe("equalSummary", () => {
   it("says who pays the extra paisa", () => {
     const s = equalSummary(330601, 3, "Rs", 0);

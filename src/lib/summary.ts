@@ -19,7 +19,11 @@ export interface Summary {
   total: number;
   /** "nobody's claimed Rs 464" or "1 pays Rs 1,103" — said once, under the rows. */
   note?: string;
+  /** Bank details, multiline, when the sender chose to include them. */
+  pay?: string;
 }
+
+export const PAY_TO = "send your share to";
 
 const DAYS = ["sun", "mon", "tue", "wed", "thu", "fri", "sat"];
 const MONTHS = ["jan", "feb", "mar", "apr", "may", "jun", "jul", "aug", "sep", "oct", "nov", "dec"];
@@ -106,6 +110,7 @@ export function summaryText(s: Summary, site: string): string {
   }
   out.push(`total ${m(s.total)}`);
   if (s.note) out.push(s.note);
+  if (s.pay) out.push("", `${PAY_TO}:`, s.pay);
   out.push("", `split with hissa · ${site}`);
   return out.join("\n");
 }

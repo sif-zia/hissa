@@ -171,3 +171,15 @@ export function Write(
     </label>
   );
 }
+
+/**
+ * Opens and closes its content by height, in CSS alone. Closed content stays
+ * in the tree so it can animate, so it is also made inert.
+ */
+export function Reveal({ open, children }: { open: boolean; children: ComponentChildren }) {
+  return (
+    <div class={open ? "reveal open" : "reveal"} aria-hidden={!open} {...{ inert: !open }}>
+      <div>{children}</div>
+    </div>
+  );
+}

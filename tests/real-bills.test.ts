@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
 import { draftFrom } from "../src/lib/reading";
-import { compute, sentence } from "../src/lib/money";
+import { billSig, compute, sentence } from "../src/lib/money";
 import type { Extracted } from "../src/lib/api";
 
 /*
@@ -62,15 +62,18 @@ describe("real bills", () => {
    * Freddy's prints 6% = 537, 50% = 3,938 and 5% = 394, and a total of 5,606.
    * No reading of those numbers, in any order, reaches 5,606 (a search of all
    * 13 stackings x 8 rate/amount readings; the nearest is Rs 4.60 off). So it
-   * lands on the nearest: the 3,938 discount first, then the 537 tax and the
-   * 5% service on what is left — and the editor says it's Rs 4.60 out.
+   * keeps the nearest — the 3,938 discount first, then the 537 tax and the 5%
+   * service on what is left — and a -4.60 difference makes up the rest, so
+   * the split is of what was paid.
    */
-  it("bill-10 does not reconcile, so it lands on the closest reading", () => {
+  it("bill-10 does not reconcile, so a difference row balances it", () => {
     const { bill, fit } = draftFrom(bills["bill-10"]!, id);
-    expect(fit).toBe("closest");
+    expect(fit).toBe("balanced");
     const t = compute(bill);
-    expect(t.total).toBe(561060);
-    expect(t.steps).toEqual([["discount"], ["service", "gst"]]);
+    expect(t.total).toBe(560600);
+    expect(t.diffAmt).toBe(-460);
+    expect(t.steps).toEqual([["discount"], ["service", "gst"], ["diff"]]);
+    expect(bill.balanced).toBe(billSig(bill));
     expect([bill.adj.discount, bill.adj.gst, bill.adj.service]).toEqual([
       { mode: "flat", val: "3938" }, { mode: "flat", val: "537" }, { mode: "pct", val: "5" },
     ]);
@@ -96,7 +99,12 @@ describe("real bills", () => {
     const { bill } = draftFrom(bills["bill-10"]!, id);
     const fixed = {
       ...bill,
-      adj: { ...bill.adj, gst: { mode: "pct" as const, val: "16" }, service: { mode: "pct" as const, val: "" } },
+      adj: {
+        ...bill.adj,
+        gst: { mode: "pct" as const, val: "16" },
+        service: { mode: "pct" as const, val: "" },
+        diff: { mode: "flat" as const, val: "" },
+      },
     };
     const t = compute(fixed);
     expect(t.steps).toEqual([["discount"], ["gst"]]);

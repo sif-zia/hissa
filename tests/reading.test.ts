@@ -100,8 +100,23 @@ describe("draftFrom (client)", () => {
     expect(bill.steps).toEqual([["gst", "discount"]]);
   });
 
-  it("lands on the closest reading when nothing fits", () => {
-    expect(draftFrom(reading({ printedTotal: 9999 }), id).fit).toBe("closest");
+  it("balances to the printed total with a difference row when nothing fits", () => {
+    const { bill, fit } = draftFrom(reading({ printedTotal: 9999 }), id);
+    expect(fit).toBe("balanced");
+    expect(compute(bill).total).toBe(999900);
+    expect(bill.steps.at(-1)).toEqual(["diff"]);
+  });
+
+  it("reads a GST printed under a total that doesn't add it as already in the prices", () => {
+    // "You have paid 16% GST: 198.62" under a 1,440 total on 1,440 of food.
+    const { bill, fit } = draftFrom(reading({
+      items: [{ name: "Wrap", qty: 1, price: 1440 }],
+      adjustments: [{ kind: "gst", pct: 16, amount: 198.62, step: 1 }],
+      printedTotal: 1440,
+    }), id);
+    expect(fit).toBe("match");
+    expect(bill.adj.gst.val).toBe("");
+    expect(compute(bill).total).toBe(144000);
   });
 
   it("reads a flat discount as flat", () => {

@@ -19,7 +19,7 @@ Built and deployed. `context/hissa_spec.md` is the product spec (v0.2) and `cont
 
 ```sh
 pnpm dev      # client only, at /app.html
-pnpm test     # 180 unit tests
+pnpm test     # 242 unit tests
 pnpm build    # static build to dist/
 vercel dev    # adds /api (needs .env.local)
 ```
@@ -40,7 +40,7 @@ Vite (multi-page) + Preact via `preact/compat` + TypeScript; `wouter-preact` for
 
 Still explicitly rejected: Next.js, a utility CSS framework, TanStack Query, Zustand, Tesseract, classical OCR.
 
-Budget: app JS **26 KB gz** against a 60 KB ceiling (17 KB before v2); landing critical path ~6 KB gz plus a 35 KB font. Fonts total 64 KB — over the 45 KB target, and the one budget that is not met. Check any dependency against these.
+Budget: app JS **29 KB gz** against a 60 KB ceiling (17 KB before v2); landing critical path ~6 KB gz plus a 35 KB font. Fonts total 64 KB — over the 45 KB target, and the one budget that is not met. Check any dependency against these.
 
 ## Invariants
 
@@ -52,7 +52,7 @@ These come from the spec's maths and data model and are the things most likely t
 
 **Per-person totals scale off the subtotal share**: `personTotal = round(billTotal × personSubtotalShare / billSubtotal)`. Tax, discount and tip ride along proportionally rather than being apportioned separately. Unclaimed amounts are shown through the same scale so the figures are comparable.
 
-**Extras stack in steps** (`money.ts`: `apply`, `Steps`). Service, GST, discount and tip each sit on a step; a step's percentages are of the running total after the step before, and rows sharing a step share a base. The default `[[service, gst], [discount, tip]]` *is* v1's rule (GST on the subtotal, discount and tip on the post-GST amount), which is why every v1 money test still passes. The editor never exposes the structure: it lists the distinct *totals* (`outcomes`) because percentages commute and most stackings collapse — three % rows give 5 outcomes, not 13. The stacking in use always represents its own total, so the list never words it differently from the "worked out" line.
+**Extras stack in steps** (`money.ts`: `apply`, `Steps`). Service, GST, discount and tip each sit on a step; a step's percentages are of the running total after the step before, and rows sharing a step share a base. The default is `PRESETS[0]`, everything on the subtotal, because that is what Pakistani bills do; v1's rule (GST on the subtotal, discount and tip on the post-GST amount) is kept as `V1_STEPS`, and the v1 money tests run against it. The balancing `diff` row is never part of a stacking: `normalise` always puts it alone, last. The editor never exposes the structure: it lists the distinct *totals* (`outcomes`) because percentages commute and most stackings collapse — three % rows give 5 outcomes, not 13. The stacking in use always represents its own total, so the list never words it differently from the "worked out" line.
 
 **Identity is a normalised name.** The device's own name is `hissa:name`, asked once; changing it never renames you on a split already open (the name is that split's key). Trim, collapse inner whitespace, lowercase. `Faraz`, `faraz` and ` FARAZ ` are one person and one storage key. This is deliberate — it makes rejoining from a second device free, and makes the name-collision failure mode visible rather than silent.
 
@@ -60,7 +60,7 @@ These come from the spec's maths and data model and are the things most likely t
 
 **The bill is frozen when the split opens.** `lines[]` entries carry `{id, name, qty, amt}` with `amt` already resolved, so members never re-derive pricing mode, tax or rounding. No post-open editing in the MVP.
 
-**Device storage.** `hissa:name`, `hissa:steps` and `hissa:withItems` are stored *without* an `at`, because `sweep()` deletes any `hissa:*` value whose `at` is a day old. `hissa:round` (pass the phone) carries one on purpose. Pass the phone never touches the server.
+**Device storage.** `hissa:name`, `hissa:bank`, `hissa:steps`, `hissa:withItems` and `hissa:withBank` are stored *without* an `at`, because `sweep()` deletes any `hissa:*` value whose `at` is a day old. `hissa:round` (pass the phone) carries one on purpose. Pass the phone never touches the server, and neither do bank details: they only reach anyone by being pasted into a summary.
 
 **Codes** are 4 characters from an unambiguous alphabet (`ABCDEFGHJKLMNPQRSTUVWXYZ23456789` — no I, O, 0, 1).
 
@@ -78,7 +78,7 @@ Five per device per 24 hours (`api/_lib/usage.ts`), enforced where the money is 
 
 Gemini Flash on the AI Studio free tier while building; a paid key behind the Worker before any external user touches it (the free tier's training clause, not its rate limit, is the blocker). Non-negotiables: resize client-side to 1,400 px long side / JPEG 0.75 before upload, use `responseMimeType: "application/json"` with a `responseSchema` rather than parsing prose, set `thinkingConfig.thinkingBudget: 0`, validate line sums against the printed subtotal, always show the human review screen, and never retain the photo.
 
-The model reports each extra with its printed rate, amount and `step`, plus the printed total, and when a bill prints two taxes for two ways of paying (cash vs card) it reports the tax and total of the *main* total line, as a pair. The client (`reading.ts` → `detect`) reads each extra as its printed rate or its printed amount (bills round and exempt things their rates don't show: "48%" charged as 1,500), tries every stacking of every reading, and takes the first reading — rates preferred, the model's stacking first — that reproduces the printed total within one major unit. When none does, it lands on the *closest* and the editor says how far off. Any extra, GST included, can be a rate or an amount. `tests/real-bills.test.ts` holds eleven real answers; the photos are in the gitignored `test_bills/`. Freddy's (bill 10) is the honest failure: it charged a 16% nobody printed. The response still carries v1's `gstPct`/`discount`/`tip` for installed v1 apps — remove them once v2 has been live a week.
+The model reports each extra with its printed rate, amount and `step`, plus the printed total, and when a bill prints two taxes for two ways of paying (cash vs card) it reports the tax and total of the *main* total line, as a pair. The client (`reading.ts` → `detect`) reads each extra as its printed rate or its printed amount (bills round and exempt things their rates don't show: "48%" charged as 1,500), tries every stacking of every reading, and takes the first reading — rates preferred, the model's stacking first — that reproduces the printed total within one major unit. Ties go to the earliest of `PRESETS` (from 27 Pakistani bills in `tests/pk-bills.test.ts`: nearly all put every extra on the subtotal), and GST may also be read as already inside the prices. When nothing reaches the total, it keeps the *closest* and adds a signed `diff` row ("difference", always alone in the last step) for the gap, so what is split is what was paid; the editor warns while the bill still matches `balanced`, its signature at that moment, so any edit hides the warning and undoing it brings it back. Any extra, GST included, can be a rate or an amount. `tests/real-bills.test.ts` holds eleven real answers; the photos are in the gitignored `test_bills/`. Freddy's (bill 10) is the honest failure: it charged a 16% nobody printed. The response still carries v1's `gstPct`/`discount`/`tip` for installed v1 apps — remove them once v2 has been live a week.
 
 The prototype calls Claude Sonnet instead, because that is the only endpoint available inside an artifact. Swapping extractors is a change to one function (`readBill`).
 

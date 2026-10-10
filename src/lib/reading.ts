@@ -5,10 +5,10 @@
  */
 
 import type { Extracted } from "./api";
-import { cents, detect, noAdj, KINDS, DEFAULT_STEPS, type Adj, type DraftBill, type Kind, type Steps } from "./money";
+import { billSig, cents, detect, noAdj, KINDS, DEFAULT_STEPS, type Adj, type DraftBill, type Kind, type Steps } from "./money";
 import { loadPref, savePref } from "./cache";
 
-export type Fit = "match" | "closest" | "unknown";
+export type Fit = "match" | "balanced" | "unknown";
 
 export function draftFrom(out: Extracted, id: () => string): { bill: DraftBill; fit: Fit } {
   const items = out.items.map((i) => ({
@@ -22,17 +22,21 @@ export function draftFrom(out: Extracted, id: () => string): { bill: DraftBill; 
   // rate is preferred, but bills round and exempt things their rates don't
   // show (15% of 2,795 printed as 418), so the amount is always a candidate.
   const adjs = (out.adjustments ?? []).filter((a) => a.pct || a.amount);
+  // Last resort for GST: already inside the prices. Some POS systems print
+  // "you have paid 16% GST: 198.62" under a total that doesn't add it.
+  const INSIDE = 10;
   const choices: [Kind, Adj[]][] = adjs.map((a) => [
     a.kind,
     [
       ...(a.pct ? [{ mode: "pct" as const, val: String(a.pct) }] : []),
       ...(a.amount ? [{ mode: "flat" as const, val: String(a.amount) }] : []),
+      ...(a.kind === "gst" ? [{ mode: "pct" as const, val: "" }] : []),
     ],
   ]);
   let variants: { adj: Record<Kind, Adj>; amounts: number }[] = [{ adj: noAdj(), amounts: 0 }];
   for (const [kind, opts] of choices) {
     variants = variants.flatMap((v) =>
-      opts.map((o, n) => ({ adj: { ...v.adj, [kind]: o }, amounts: v.amounts + n })));
+      opts.map((o, n) => ({ adj: { ...v.adj, [kind]: o }, amounts: v.amounts + (o.val ? n : INSIDE) })));
   }
   variants.sort((a, b) => a.amounts - b.amounts);
 
@@ -49,7 +53,8 @@ export function draftFrom(out: Extracted, id: () => string): { bill: DraftBill; 
     printedTotal: out.printedTotal ? cents(out.printedTotal) : undefined,
   };
   const { adj, steps, fit } = detect(bill, said, variants.map((v) => v.adj));
-  return { bill: { ...bill, adj, steps }, fit };
+  const settled = { ...bill, adj, steps };
+  return { bill: fit === "balanced" ? { ...settled, balanced: billSig(settled) } : settled, fit };
 }
 
 /** The stacking of the last bill that was split, for the next manual one. */

@@ -1,7 +1,7 @@
 import { describe, it, expect } from "vitest";
 import {
-  num, cents, fmt, priceOf, compute, normalise, arrangements, outcomes, sentence, detect, apply,
-  DEFAULT_STEPS, noAdj, type DraftBill, type AmountMode, type Kind, type Steps,
+  billSig, num, cents, fmt, priceOf, compute, normalise, arrangements, outcomes, sentence, detect, apply,
+  V1_STEPS, noAdj, type DraftBill, type AmountMode, type Kind, type Steps,
 } from "../src/lib/money";
 
 /**
@@ -26,7 +26,7 @@ const bill = ({ gst, discount, tip, service, ...over }: V1 = {}): DraftBill => {
     priceMode: "total",
     items: [{ id: "a", name: "Wrap", qty: "7", price: "6790" }],
     adj,
-    steps: DEFAULT_STEPS,
+    steps: V1_STEPS,
     ...over,
   };
 };
@@ -121,7 +121,7 @@ describe("stacking steps", () => {
   });
 
   it("gst first, then discount & tip (the v1 rule)", () => {
-    const t = compute(three(DEFAULT_STEPS));
+    const t = compute(three(V1_STEPS));
     expect(t.bases.discount).toBe(348000);
     expect(t.total).toBe(300000 + 48000 - 34800 + 17400);
   });
@@ -198,7 +198,7 @@ describe("arrangements", () => {
 
 describe("outcomes", () => {
   it("collapses three % rows to exactly five distinct totals", () => {
-    const { visible, more } = outcomes(three(DEFAULT_STEPS), 99);
+    const { visible, more } = outcomes(three(V1_STEPS), 99);
     expect(visible.length + more.length).toBe(5);
   });
 
@@ -234,7 +234,7 @@ describe("outcomes", () => {
 
   it("words the selected option exactly as the stacking in use", () => {
     // Percentages commute, so "discount & tip, then gst" ties with the default.
-    const { visible } = outcomes(three(DEFAULT_STEPS));
+    const { visible } = outcomes(three(V1_STEPS));
     expect(visible.find((o) => o.current)!.steps).toEqual([["gst"], ["discount", "tip"]]);
   });
 
@@ -245,7 +245,7 @@ describe("outcomes", () => {
   });
 
   it("keeps a three-step chain as its own outcome when its total is distinct", () => {
-    const all = outcomes(three(DEFAULT_STEPS), 99);
+    const all = outcomes(three(V1_STEPS), 99);
     expect([...all.visible, ...all.more].some((o) => o.steps.length === 3)).toBe(true);
   });
 });
@@ -267,7 +267,7 @@ describe("sentence", () => {
 });
 
 describe("detect", () => {
-  const b = (printedTotal?: number) => ({ ...three(DEFAULT_STEPS), printedTotal });
+  const b = (printedTotal?: number) => ({ ...three(V1_STEPS), printedTotal });
 
   it("accepts the model's steps when they reproduce the printed total within a rupee", () => {
     const r = detect(b(330600 + 60), [["gst"], ["discount", "tip"]]);
@@ -277,29 +277,64 @@ describe("detect", () => {
   it("finds the right stacking when the model's is wrong", () => {
     const r = detect(b(333000), [["gst"], ["discount", "tip"]]);
     expect(r.fit).toBe("match");
-    expect(apply(300000, three(DEFAULT_STEPS).adj, r.steps).total).toBe(333000);
+    expect(apply(300000, three(V1_STEPS).adj, r.steps).total).toBe(333000);
     expect(r.steps).toEqual([["gst", "discount", "tip"]]);
   });
 
-  it("picks the closest stacking when nothing reaches the printed total", () => {
+  it("keeps the closest stacking and balances the rest when nothing reaches the printed total", () => {
     const r = detect(b(340000), [["gst"], ["discount", "tip"]]);
-    expect(r.fit).toBe("closest");
+    expect(r.fit).toBe("balanced");
     // The largest of the five totals is the nearest to 340,000.
-    const { visible, more } = outcomes(three(DEFAULT_STEPS), 99);
+    const { visible, more } = outcomes(three(V1_STEPS), 99);
     const top = Math.max(...[...visible, ...more].map((o) => o.total));
-    expect(apply(300000, r.adj, r.steps).total).toBe(top);
+    expect(apply(300000, { ...r.adj, diff: { mode: "flat", val: "" } }, r.steps).total).toBe(top);
+    expect(apply(300000, r.adj, r.steps).total).toBe(340000);
+    expect(r.steps.at(-1)).toEqual(["diff"]);
   });
 
   it("prefers an exact reading from a later variant over a closer-looking earlier one", () => {
-    const rate = three(DEFAULT_STEPS).adj;
+    const rate = three(V1_STEPS).adj;
     const asAmount = { ...rate, gst: { mode: "flat" as const, val: "470" } };
     // Only the flat 470 reading reaches 329,700 (3000 + 470 - 347 + 173.5).
-    const r = detect({ ...three(DEFAULT_STEPS), printedTotal: 329650 }, [["gst"], ["discount", "tip"]], [rate, asAmount]);
+    const r = detect({ ...three(V1_STEPS), printedTotal: 329650 }, [["gst"], ["discount", "tip"]], [rate, asAmount]);
     expect(r.fit).toBe("match");
     expect(r.adj.gst).toEqual({ mode: "flat", val: "470" });
   });
 
   it("takes the model's word when no total was printed", () => {
     expect(detect(b(undefined), [["gst", "discount", "tip"]]).fit).toBe("unknown");
+  });
+});
+
+describe("the difference row", () => {
+  const base = (val: string): DraftBill => {
+    const adj = noAdj();
+    adj.gst = { mode: "pct", val: "10" };
+    adj.diff = { mode: "flat", val };
+    return { currency: "Rs", priceMode: "total", items: [{ id: "a", name: "x", qty: "1", price: "1000" }], adj, steps: V1_STEPS };
+  };
+
+  it("adds or takes its signed amount after everything else", () => {
+    expect(compute(base("37")).total).toBe(113700);
+    expect(compute(base("-4.6")).total).toBe(109540);
+    expect(compute(base("-4.6")).steps).toEqual([["gst"], ["diff"]]);
+  });
+
+  it("never becomes a base for a percentage", () => {
+    expect(compute(base("500")).bases.gst).toBe(100000);
+  });
+
+  it("stays last in every stacking the picker offers, and out of its sentence", () => {
+    const all = outcomes(base("37"), 99);
+    for (const o of [...all.visible, ...all.more]) expect(o.steps.at(-1)).toEqual(["diff"]);
+    expect(sentence([["gst"], ["diff"]], base("37").adj)).toBe("all on the food");
+  });
+
+  it("is signed by the bill's numbers, so undoing an edit restores it", () => {
+    const b = base("37");
+    const sig = billSig(b);
+    const two = { ...b, items: [{ ...b.items[0]!, qty: "2" }] };
+    expect(billSig(two)).not.toBe(sig);
+    expect(billSig({ ...two, items: [{ ...two.items[0]!, qty: "1" }] })).toBe(sig);
   });
 });

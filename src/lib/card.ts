@@ -5,7 +5,7 @@
  */
 
 import { fmt } from "./money";
-import type { Summary } from "./summary";
+import { PAY_TO, type Summary } from "./summary";
 
 const PAPER = "#f3ecda";
 const RULE = "rgba(120, 106, 84, 0.16)";
@@ -115,6 +115,21 @@ export async function drawCard(s: Summary): Promise<Blob> {
       x.font = `500 40px ${SCRAWL}`;
       x.fillText(s.note!, PAD, y + 40, W - PAD * 2);
     });
+  }
+  if (s.pay) {
+    at(40, (x, y) => dashed(x, y + 20));
+    at(56, (x, y) => {
+      x.fillStyle = INK_3;
+      x.font = `500 38px ${SCRAWL}`;
+      x.fillText(PAY_TO, PAD, y + 40);
+    });
+    for (const line of s.pay.split("\n")) {
+      at(50, (x, y) => {
+        x.fillStyle = INK;
+        x.font = `400 34px ${LEDGER}`;
+        x.fillText(line, PAD, y + 36, W - PAD * 2);
+      });
+    }
   }
   at(110, (x, y) => {
     x.fillStyle = ROSE;
