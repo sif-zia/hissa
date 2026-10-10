@@ -17,6 +17,10 @@ import { shapeReading, KINDS, type Raw } from "./_lib/reading.js";
  */
 export const config = { maxDuration: 60 };
 
+/** Gemini overloaded or rate-limited: the photo is fine, the reader is busy. */
+const SURGE =
+  "We're seeing a surge in requests right now, so we can't read your bill. Could you enter it manually instead?";
+
 /**
  * Overridable without a redeploy, because models get retired: the spec's
  * gemini-2.5-flash stopped accepting new users, which is exactly the failure
@@ -162,6 +166,9 @@ export const POST = handler(async (req) => {
   if (!res.ok) {
     console.error("gemini", MODEL, res.status, (await res.text()).slice(0, 300));
     await refund();
+    // Overloaded or rate-limited upstream: nothing wrong with the photo, so
+    // say so, and steer to typing it in rather than another try.
+    if (res.status === 503 || res.status === 429) throw new HttpError(SURGE, 503);
     throw new HttpError("Could not read that bill.", 502);
   }
 
