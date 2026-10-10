@@ -16,4 +16,10 @@ describe("no network", () => {
     vi.stubGlobal("fetch", async () => new Response(JSON.stringify({ error: "Could not read that bill." }), { status: 502 }));
     await expect(extract("x")).rejects.toMatchObject({ status: 502, message: "Could not read that bill." });
   });
+
+  it("carries the server's surge message on a 503, for the app to show as is", async () => {
+    const surge = "We're seeing a surge in requests right now, so we can't read your bill. Could you enter it manually instead?";
+    vi.stubGlobal("fetch", async () => new Response(JSON.stringify({ error: surge }), { status: 503 }));
+    await expect(extract("x")).rejects.toMatchObject({ status: 503, message: surge });
+  });
 });

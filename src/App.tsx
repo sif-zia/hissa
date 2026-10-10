@@ -182,7 +182,10 @@ export function App() {
         return;
       }
       // Never dead-end on a failed read: typing five lines beats a retake.
-      setErr("Couldn't read that one. Type the lines in — it's quicker than another retake.");
+      // A 503 is the reader being overloaded, and the server says so itself.
+      setErr(e instanceof ApiError && e.status === 503
+        ? e.message
+        : "Couldn't read that one. Type the lines in — it's quicker than another retake.");
       setSuspect(false);
       setBill(blank());
       setScreen("editor");
