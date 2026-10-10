@@ -154,10 +154,18 @@ export const POST = handler(async (req) => {
 
   let res: Response;
   try {
-    res = await call(true);
+    let thinking = true;
+    res = await call(thinking);
     // Newer models reject thinkingBudget outright rather than ignoring it. Retry
     // once without it so swapping GEMINI_MODEL forward never needs a code change.
-    if (res.status === 400) res = await call(false);
+    if (res.status === 400) res = await call((thinking = false));
+    // "High demand" 503s are usually gone a moment later: one quiet retry
+    // before anyone is told. A rate-limit 429 won't clear that fast.
+    if (res.status === 503) {
+      console.warn("gemini", MODEL, "503, retrying once");
+      await new Promise((r) => setTimeout(r, 1500));
+      res = await call(thinking);
+    }
   } catch {
     await refund();
     throw new HttpError("Could not read that bill.", 502);
