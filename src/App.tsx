@@ -367,6 +367,7 @@ export function App() {
     setBillName(""); setJoinCode(""); setJoinName(null);
   };
   const goHome = () => {
+    wasSplit.current = false;
     resetFlow();
     setScreen("home");
     const d = depth();
@@ -382,16 +383,22 @@ export function App() {
   };
 
   /* Browser / hardware back: follow the history entry we land on. */
-  const live = useRef({ bill, shot, round, code, turnBack });
-  live.current = { bill, shot, round, code, turnBack };
+  const live = useRef({ bill, shot, round, turnBack });
+  live.current = { bill, shot, round, turnBack };
+  // The router may already have dropped `code` by the time popstate reaches us,
+  // so remember separately that a split was open; only popstate clears it.
+  const wasSplit = useRef(false);
+  if (code) wasSplit.current = true;
   useEffect(() => {
     history.replaceState({ s: "home", d: 0 }, "");
     const onPop = () => {
-      const { bill, shot, round, code, turnBack } = live.current;
+      const { bill, shot, round, turnBack } = live.current;
       const st = history.state as { s?: Screen; d?: number } | null;
       const d = st?.d ?? 0;
       // Left a live split: skip the flow steps underneath, straight home.
-      if (code && !location.pathname.startsWith("/s/")) {
+      const onSplitUrl = location.pathname.startsWith("/s/");
+      if (wasSplit.current && !onSplitUrl) {
+        wasSplit.current = false;
         resetFlow();
         if (d > 0) history.go(-d);
         else setScreenRaw("home");
