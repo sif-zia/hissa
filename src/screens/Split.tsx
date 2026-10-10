@@ -1,9 +1,9 @@
-import { Sheet, Head, Amount } from "../ui";
+import { Sheet, Head, Amount, Reveal } from "../ui";
 import { fmt } from "../lib/money";
 import { spread, shareOf, type BillMeta, type Claims, type Person } from "../lib/split";
 import { paletteFor, type Identity } from "../lib/identity";
 import { ItemList } from "./ItemList";
-import { ShareBlock } from "./ShareBlock";
+import { ShareBlock, PayNote, useShareOpts } from "./ShareBlock";
 import { billSummary } from "../lib/summary";
 
 /**
@@ -45,6 +45,9 @@ export function Split({
   const { subShare, loose, byLine } = spread(meta, everyone);
   // Built from every key on the bill, so it is identical on every device.
   const palette = paletteFor(everyone.map((p) => p.key));
+  const opts = useShareOpts();
+  // Always built with items, so closing the box can animate them away.
+  const { rows } = billSummary(meta, everyone, palette, true);
   const myTotal = shareOf(meta, subShare[me.key] ?? 0);
   const looseTotal = shareOf(meta, loose);
 
@@ -98,36 +101,50 @@ export function Split({
 
       <h2 style={{ fontSize: "var(--step-1)", marginTop: 22 }}>who owes what</h2>
       <div>
-        {everyone.map((p) => (
-          <div class="row" key={p.key} style={{ padding: "7px 0", borderBottom: "1.5px dashed var(--ink-line)" }}>
-            <span>
-              <span
-                aria-hidden="true"
-                style={{
-                  display: "inline-block", width: 9, height: 9, borderRadius: "50%",
-                  background: palette[p.key], marginRight: 8,
-                }}
-              />
-              {p.name}
-              {p.key === me.key ? (
-                <>
-                  <span class="scrawl" style={{ color: "var(--rose)" }}> ← you</span>
-                  <button
-                    class="link"
-                    style={{ fontSize: "0.95rem", marginLeft: 10 }}
-                    onClick={onChangeName}
-                  >
-                    not {me.name}?
-                  </button>
-                </>
-              ) : null}
-            </span>
-            <Amount value={money(shareOf(meta, subShare[p.key] ?? 0))} dim={p.key !== me.key} />
+        {everyone.map((p, i) => (
+          <div key={p.key} style={{ borderBottom: "1.5px dashed var(--ink-line)" }}>
+            <div class="row" style={{ padding: "7px 0" }}>
+              <span>
+                <span
+                  aria-hidden="true"
+                  style={{
+                    display: "inline-block", width: 9, height: 9, borderRadius: "50%",
+                    background: palette[p.key], marginRight: 8,
+                  }}
+                />
+                {p.name}
+                {p.key === me.key ? (
+                  <>
+                    <span class="scrawl" style={{ color: "var(--rose)" }}> ← you</span>
+                    <button
+                      class="link"
+                      style={{ fontSize: "0.95rem", marginLeft: 10 }}
+                      onClick={onChangeName}
+                    >
+                      not {me.name}?
+                    </button>
+                  </>
+                ) : null}
+              </span>
+              <Amount value={money(shareOf(meta, subShare[p.key] ?? 0))} dim={p.key !== me.key} />
+            </div>
+            <Reveal open={opts.withItems}>
+              <ul class="person-items dim">
+                {(rows[i]?.items ?? []).map((it, j) => (
+                  <li key={j} class="row">
+                    <span>{it.name}{it.frac ? ` ${it.frac}` : ""}</span>
+                    <Amount value={money(it.amt)} dim />
+                  </li>
+                ))}
+              </ul>
+            </Reveal>
           </div>
         ))}
       </div>
 
-      <ShareBlock make={(w) => billSummary(meta, everyone, palette, w)} flash={flash} />
+      <PayNote opts={opts} />
+
+      <ShareBlock make={(w) => billSummary(meta, everyone, palette, w)} opts={opts} flash={flash} />
 
       <p class="scrawl dim small" style={{ marginTop: 20 }}>
         {live

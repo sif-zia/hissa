@@ -66,6 +66,14 @@ export const loadName = (): string => {
 };
 export const saveName = (n: string): void => savePref("name", n);
 
+/** Where to send money, as the person typed it. Only ever on this device:
+ *  it is shared by being pasted into a summary, never sent to the server. */
+export const loadBank = (): string => {
+  const b = loadPref<unknown>("bank");
+  return typeof b === "string" ? b : "";
+};
+export const saveBank = (b: string): void => savePref("bank", b.trim());
+
 export const loadBill = (code: string): Cached | null => read<Cached>(key("bill", code));
 export const saveBill = (code: string, etag: string, state: BillState): void =>
   write(key("bill", code), { etag, state, at: Date.now() } satisfies Cached);

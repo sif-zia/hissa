@@ -13,9 +13,14 @@ export interface DraftItem {
   price: string;
 }
 
-/** The extras a bill can carry. Discount is the only one that subtracts. */
-export type Kind = "service" | "gst" | "discount" | "tip";
-export const KINDS: readonly Kind[] = ["service", "gst", "discount", "tip"];
+/**
+ * The extras a bill can carry. Discount subtracts; `diff` is signed. `diff` is
+ * never printed on a bill: it is the balancing row added when no reading of
+ * the printed extras reaches the printed total, and it always stacks last,
+ * alone, so it never moves another row's base.
+ */
+export type Kind = "service" | "gst" | "discount" | "tip" | "diff";
+export const KINDS: readonly Kind[] = ["service", "gst", "discount", "tip", "diff"];
 
 /**
  * How the extras stack: ordered groups ("steps"). Every % in step 1 is of the
@@ -24,7 +29,25 @@ export const KINDS: readonly Kind[] = ["service", "gst", "discount", "tip"];
  * v1 rule.
  */
 export type Steps = Kind[][];
-export const DEFAULT_STEPS: Steps = [["service", "gst"], ["discount", "tip"]];
+
+/**
+ * Stackings in the order Pakistani bills use them, from 27 photographed
+ * receipts (Google Images, "cafe lahore long bill receipt", 2026-10-10;
+ * transcribed in tests/pk-bills.test.ts). Every one with extras put them all
+ * on the subtotal, bar two that printed GST already inside the total and
+ * Freddy's, which adds up by no reading. Service before GST on the
+ * service-inclusive amount showed up only weakly (one bill's rates, one
+ * cropped "total before tax"), and v1's rule stays last for old habits. A tie
+ * between stackings that both reach the printed total goes to the earlier one.
+ */
+export const PRESETS: readonly Steps[] = [
+  [["service", "gst", "discount", "tip"]],
+  [["service"], ["gst", "discount", "tip"]],
+  [["service", "gst"], ["discount", "tip"]],
+];
+export const DEFAULT_STEPS: Steps = PRESETS[0]!;
+/** v1's rule: GST on the subtotal, discount and tip on the post-GST amount. */
+export const V1_STEPS: Steps = [["service", "gst"], ["discount", "tip"]];
 
 export interface Adj { mode: AmountMode; val: string }
 
@@ -36,6 +59,8 @@ export interface DraftBill {
   steps: Steps;
   /** The total printed on the photographed bill, minor units, if one was read. */
   printedTotal?: number;
+  /** billSig() of the bill when a `diff` row was added to balance it. */
+  balanced?: string;
 }
 
 export const noAdj = (): Record<Kind, Adj> => ({
@@ -43,6 +68,7 @@ export const noAdj = (): Record<Kind, Adj> => ({
   gst: { mode: "pct", val: "" },
   discount: { mode: "flat", val: "" },
   tip: { mode: "flat", val: "" },
+  diff: { mode: "flat", val: "" },
 });
 
 /** A line as frozen onto the bill: `amt` already resolved to minor units. */
@@ -66,6 +92,8 @@ export interface Totals {
   gstAmt: number;
   discountAmt: number;
   tipAmt: number;
+  /** Signed. */
+  diffAmt: number;
   total: number;
   /** A discount bigger than the bill; the total was held at zero. */
   clamped: boolean;
@@ -92,7 +120,12 @@ export function priceOf(it: DraftItem, mode: PriceMode): number {
 }
 
 /** Extras with something in them. Empty rows take no part in the stacking. */
-export const active = (adj: Record<Kind, Adj>): Kind[] => KINDS.filter((k) => num(adj[k].val) > 0);
+export const active = (adj: Record<Kind, Adj>): Kind[] =>
+  KINDS.filter((k) => (k === "diff" ? num(adj[k].val) !== 0 : num(adj[k].val) > 0));
+
+/** Everything that changes the bill's numbers, as one comparable string. */
+export const billSig = (b: DraftBill): string =>
+  JSON.stringify([b.priceMode, b.items.map((i) => [i.name, i.qty, i.price]), b.adj, b.steps]);
 
 const modeOf = (k: Kind, adj: Record<Kind, Adj>): AmountMode => adj[k].mode;
 
@@ -103,20 +136,24 @@ const modeOf = (k: Kind, adj: Record<Kind, Adj>): AmountMode => adj[k].mode;
  */
 export function normalise(steps: Steps, act: readonly Kind[]): Steps {
   const on = new Set(act);
-  const out = steps.map((g) => g.filter((k) => on.has(k))).filter((g) => g.length > 0);
+  const out = steps.map((g) => g.filter((k) => on.has(k) && k !== "diff")).filter((g) => g.length > 0);
   const seen = new Set(out.flat());
   for (const k of KINDS) {
-    if (!on.has(k) || seen.has(k)) continue;
+    if (!on.has(k) || seen.has(k) || k === "diff") continue;
     if (!out.length) out.push([]);
     const g = k === "service" || k === "gst" ? out[0] : out[out.length - 1];
     g!.push(k);
     seen.add(k);
   }
   // Canonical order inside a step: rows in one step commute.
-  return out.map((g) => KINDS.filter((k) => g.includes(k)));
+  return withDiff(out.map((g) => KINDS.filter((k) => g.includes(k))), act);
 }
 
-const zeros = (): Record<Kind, number> => ({ service: 0, gst: 0, discount: 0, tip: 0 });
+/** The balancing row, when there is one, as its own last step. */
+const withDiff = (steps: Steps, act: readonly Kind[]): Steps =>
+  act.includes("diff") ? [...steps.filter((g) => g.length), ["diff"]] : steps;
+
+const zeros = (): Record<Kind, number> => ({ service: 0, gst: 0, discount: 0, tip: 0, diff: 0 });
 
 /** Runs the extras over a subtotal, step by step. Integer minor units only. */
 export function apply(subtotal: number, adj: Record<Kind, Adj>, steps: Steps) {
@@ -157,6 +194,7 @@ export function compute(bill: DraftBill): Totals {
   return {
     lines, subtotal, amts, bases, steps, total, clamped,
     serviceAmt: amts.service, gstAmt: amts.gst, discountAmt: amts.discount, tipAmt: amts.tip,
+    diffAmt: amts.diff,
   };
 }
 
@@ -187,6 +225,17 @@ export function arrangements(kinds: readonly Kind[]): Steps[] {
 
 /** Each kind's step number, in KINDS order: gst-first sorts before discount-first. */
 const rank = (st: Steps): number[] => KINDS.map((k) => st.findIndex((g) => g.includes(k)));
+
+/** Every stacking of the active extras, the balancing row last on each. */
+const stackings = (act: readonly Kind[]): Steps[] =>
+  arrangements(act.filter((k) => k !== "diff")).map((st) => withDiff(st, act));
+
+/** Where a stacking sits in PRESETS; past the end when it is none of them. */
+const presetRank = (st: Steps, act: readonly Kind[]): number => {
+  const s = JSON.stringify(st);
+  const i = PRESETS.findIndex((p) => JSON.stringify(normalise(p, act)) === s);
+  return i < 0 ? PRESETS.length : i;
+};
 
 /** Fewer steps first, then the rows' fixed order: the plainest reading wins. */
 const simpler = (a: Steps, b: Steps): number => {
@@ -227,10 +276,11 @@ export function outcomes(bill: DraftBill, max = 4): { visible: Outcome[]; more: 
   // The stacking in use speaks for its own total, so the list never words the
   // selected option differently from the "worked out" line above it.
   const byTotal = new Map<number, Steps>([[cur, curSteps]]);
-  for (const st of arrangements(act)) {
+  const plainer = (a: Steps, b: Steps) => presetRank(a, act) - presetRank(b, act) || simpler(a, b);
+  for (const st of stackings(act)) {
     const t = apply(subtotal, bill.adj, st).total;
     const had = byTotal.get(t);
-    if (!had || (t !== cur && simpler(st, had) < 0)) byTotal.set(t, st);
+    if (!had || (t !== cur && plainer(st, had) < 0)) byTotal.set(t, st);
   }
 
   const all: Outcome[] = [...byTotal].map(([total, steps]) => ({
@@ -249,15 +299,19 @@ export function outcomes(bill: DraftBill, max = 4): { visible: Outcome[]; more: 
     Number(b.matches) - Number(a.matches) ||
     Number(b.closest) - Number(a.closest) ||
     Number(b.current) - Number(a.current) ||
-    simpler(a.steps, b.steps));
+    plainer(a.steps, b.steps));
   return { visible: all.slice(0, max), more: all.slice(max) };
 }
 
-const LABEL: Record<Kind, string> = { service: "service", gst: "gst", discount: "discount", tip: "tip" };
+const LABEL: Record<Kind, string> = {
+  service: "service", gst: "gst", discount: "discount", tip: "tip", diff: "difference",
+};
 const names = (g: Kind[]): string => g.map((k) => LABEL[k]).join(" & ");
 
 /** A stacking as a sentence someone at the table can check. */
-export function sentence(steps: Steps, adj: Record<Kind, Adj>): string {
+export function sentence(all: Steps, adj: Record<Kind, Adj>): string {
+  // The balancing row always goes last and says so itself.
+  const steps = all.filter((g) => !g.includes("diff"));
   if (steps.length <= 1) return "all on the food";
   if (steps.length >= 3 && steps.every((g) => g.length === 1)) {
     const flat = steps.some(([k]) => modeOf(k!, adj) === "flat");
@@ -272,39 +326,44 @@ export function sentence(steps: Steps, adj: Record<Kind, Adj>): string {
  * Settles a photographed bill: which reading of each extra (its printed
  * rate or its printed amount — `variants`, in order of preference) and
  * which stacking. The first variant with a stacking that reproduces the
- * printed total within a rupee wins, the model's own stacking first. When
- * nothing does, the closest total wins: a bill that doesn't add up still
- * lands on the nearest honest reading, and the editor says how far off.
+ * printed total within a rupee wins: the model's own stacking first, then
+ * the earliest preset. When nothing does, the nearest reading is kept and a
+ * `diff` row makes up the rest, so what gets split is what was paid; the
+ * editor says so for as long as the bill is untouched.
  */
 export function detect(
   bill: DraftBill,
   llmSteps: Steps,
   variants: Record<Kind, Adj>[] = [bill.adj],
-): { adj: Record<Kind, Adj>; steps: Steps; fit: "match" | "closest" | "unknown" } {
+): { adj: Record<Kind, Adj>; steps: Steps; fit: "match" | "balanced" | "unknown" } {
   const first = variants[0] ?? bill.adj;
   const printed = bill.printedTotal;
   if (!printed) return { adj: first, steps: normalise(llmSteps, active(first)), fit: "unknown" };
 
   const subtotal = compute(bill).subtotal;
-  interface C { adj: Record<Kind, Adj>; steps: Steps; off: number; v: number; said: boolean }
-  // An exact reading: plainer extras first, then the model's stacking, then the plainest.
+  interface C { adj: Record<Kind, Adj>; steps: Steps; total: number; off: number; v: number; said: boolean; p: number }
+  // An exact reading: plainer extras first, then the model's stacking, then the commonest.
   const betterExact = (a: C, b: C) =>
-    a.v - b.v || Number(b.said) - Number(a.said) || a.off - b.off || simpler(a.steps, b.steps);
+    a.v - b.v || Number(b.said) - Number(a.said) || a.p - b.p || a.off - b.off || simpler(a.steps, b.steps);
   // No exact reading: nearest first.
   const betterNear = (a: C, b: C) =>
-    a.off - b.off || a.v - b.v || Number(b.said) - Number(a.said) || simpler(a.steps, b.steps);
+    a.off - b.off || a.v - b.v || Number(b.said) - Number(a.said) || a.p - b.p || simpler(a.steps, b.steps);
 
   let exact = null as C | null;
   let near = null as C | null;
   variants.forEach((adj, v) => {
     const act = active(adj);
     const said = normalise(llmSteps, act);
-    [said, ...arrangements(act)].forEach((steps, i) => {
-      const c: C = { adj, steps, off: Math.abs(apply(subtotal, adj, steps).total - printed), v, said: i === 0 };
+    [said, ...stackings(act)].forEach((steps, i) => {
+      const total = apply(subtotal, adj, steps).total;
+      const c: C = { adj, steps, total, off: Math.abs(total - printed), v, said: i === 0, p: presetRank(steps, act) };
       if (c.off <= MATCH_SLACK && (!exact || betterExact(c, exact) < 0)) exact = c;
       if (!near || betterNear(c, near) < 0) near = c;
     });
   });
-  const pick = (exact ?? near)!;
-  return { adj: pick.adj, steps: pick.steps, fit: exact ? "match" : "closest" };
+  if (exact) return { adj: exact.adj, steps: exact.steps, fit: "match" };
+
+  const n = near!;
+  const adj = { ...n.adj, diff: { mode: "flat" as const, val: String((printed - n.total) / 100) } };
+  return { adj, steps: normalise(n.steps, active(adj)), fit: "balanced" };
 }

@@ -4,7 +4,7 @@ import { equalSplit } from "../lib/split";
 import { useState } from "preact/hooks";
 import { tiltStyle } from "../lib/tilt";
 import { equalSummary } from "../lib/summary";
-import { ShareBlock } from "./ShareBlock";
+import { ShareBlock, PayNote, useShareOpts } from "./ShareBlock";
 
 /**
  * A local calculator. Never touches shared storage: no code, no names, no
@@ -22,6 +22,7 @@ export function EqualSplit({
 }) {
   const { base, extra } = equalSplit(total, heads);
   const [at] = useState(Date.now);
+  const opts = useShareOpts();
 
   return (
     <Sheet>
@@ -56,7 +57,9 @@ export function EqualSplit({
         )}
       </div>
 
-      <ShareBlock make={() => equalSummary(total, heads, currency, at)} items={false} flash={flash} />
+      <PayNote opts={opts} />
+
+      <ShareBlock make={() => equalSummary(total, heads, currency, at)} opts={opts} items={false} flash={flash} />
     </Sheet>
   );
 }

@@ -1,7 +1,7 @@
 import { Sheet, Head, Amount } from "../ui";
 import { useState } from "preact/hooks";
 import {
-  compute, fmt, outcomes, sentence, KINDS, MATCH_SLACK,
+  billSig, compute, fmt, num, outcomes, sentence, KINDS, MATCH_SLACK,
   type DraftBill, type DraftItem, type Kind,
 } from "../lib/money";
 import { uid } from "../lib/identity";
@@ -27,7 +27,8 @@ export function Editor({
   const t = compute(bill);
   const cur = bill.currency;
   const money = (c: number) => fmt(c, cur, true);
-  const [showService, setShowService] = useState(Boolean(bill.adj.service.val));
+  // Rows on show: whatever arrived with a value, plus whatever was added here.
+  const [shown, setShown] = useState<Kind[]>(() => KINDS.filter((k) => num(bill.adj[k].val) !== 0));
   const [picking, setPicking] = useState(false);
   const [more, setMore] = useState(false);
   const choices = outcomes(bill);
@@ -44,6 +45,12 @@ export function Editor({
     patch({ items: [...bill.items, { id: uid(), name: "", qty: "1", price: "" }] });
   const dropLine = (id: string) =>
     patch({ items: bill.items.filter((i) => i.id !== id) });
+  const dropExtra = (k: Kind) => {
+    setShown(shown.filter((s) => s !== k));
+    patch({ adj: { ...bill.adj, [k]: { ...bill.adj[k], val: "" } } });
+  };
+  const addable = KINDS.filter((k) => k !== "diff" && !shown.includes(k));
+  const balanced = Boolean(bill.balanced) && bill.balanced === billSig(bill);
 
   return (
     <Sheet>
@@ -136,16 +143,27 @@ export function Editor({
       <hr class="rule-dash" style={{ marginTop: 22 }} />
 
       <div class="stack">
-        {showService ? <ExtraRow kind="service" bill={bill} patch={patch} cur={cur} /> : null}
-        <ExtraRow kind="gst" bill={bill} patch={patch} cur={cur} />
-        <ExtraRow kind="discount" bill={bill} patch={patch} cur={cur} />
-        <ExtraRow kind="tip" bill={bill} patch={patch} cur={cur} />
-        {!showService ? (
-          <button class="link" style={{ fontSize: "1.05em" }} onClick={() => setShowService(true)}>
-            + service charge
-          </button>
+        {KINDS.filter((k) => shown.includes(k)).map((k) => (
+          <ExtraRow key={k} kind={k} bill={bill} patch={patch} cur={cur} onDrop={() => dropExtra(k)} />
+        ))}
+        {addable.length ? (
+          <p class="add-extras">
+            {addable.map((k) => (
+              <button key={k} class="link" onClick={() => setShown([...shown, k])}>
+                + {ADD[k]}
+              </button>
+            ))}
+          </p>
         ) : null}
       </div>
+
+      {balanced ? (
+        <p class="sticky scrawl" style={{ "--tilt": "-1.1deg", color: "var(--warn)", marginTop: 18 }}>
+          heads up → nothing printed on the bill adds up to its {money(printed ?? 0)}, so a{" "}
+          {t.diffAmt < 0 ? "discount" : "charge"} of {money(Math.abs(t.diffAmt))} was added as
+          "difference" to match what you paid. worth a check.
+        </p>
+      ) : null}
 
       {t.clamped ? (
         <p class="sticky scrawl" style={{ "--tilt": "-1.2deg", color: "var(--warn)", marginTop: 18 }}>
@@ -174,7 +192,7 @@ export function Editor({
                 <> of <span class="amt">{fmt(t.bases[k], "", false).trim()}</span></>
               ) : null}
             </span>
-            <Amount value={`${k === "discount" ? "−" : "+"}${money(t.amts[k])}`} />
+            <Amount value={`${k === "discount" || t.amts[k] < 0 ? "−" : "+"}${money(Math.abs(t.amts[k]))}`} />
           </div>
         ))}
 
@@ -241,16 +259,22 @@ export function Editor({
   );
 }
 
-const LABEL: Record<Kind, string> = { service: "service", gst: "gst", discount: "discount", tip: "tip" };
+const LABEL: Record<Kind, string> = {
+  service: "service", gst: "gst", discount: "discount", tip: "tip", diff: "difference",
+};
+const ADD: Record<Kind, string> = {
+  service: "service charge", gst: "gst", discount: "discount", tip: "tip", diff: "difference",
+};
 
-/** One extra: its name, flat/% where that applies, and the value. */
+/** One extra: its name, flat/% where that applies, the value, and a ×. */
 function ExtraRow({
-  kind, bill, patch, cur,
+  kind, bill, patch, cur, onDrop,
 }: {
   kind: Kind;
   bill: DraftBill;
   patch: (over: Partial<DraftBill>) => void;
   cur: string;
+  onDrop: () => void;
 }) {
   const a = bill.adj[kind];
   const set = (over: Partial<typeof a>) => patch({ adj: { ...bill.adj, [kind]: { ...a, ...over } } });
@@ -258,21 +282,31 @@ function ExtraRow({
     <div class="row">
       <label class="eyebrow" for={`f-${kind}`}>{LABEL[kind]}</label>
       <span style={{ display: "flex", gap: 6, alignItems: "end" }}>
-        <button class={a.mode === "flat" ? "tiny on" : "tiny"} onClick={() => set({ mode: "flat" })}>
-          {cur}
-        </button>
-        <button class={a.mode === "pct" ? "tiny on" : "tiny"} onClick={() => set({ mode: "pct" })}>
-          %
-        </button>
+        {/* The balancing row is an amount, signed: a rate of nothing means nothing. */}
+        {kind === "diff" ? (
+          <span class="tiny on" aria-hidden="true">{cur}</span>
+        ) : (
+          <>
+            <button class={a.mode === "flat" ? "tiny on" : "tiny"} onClick={() => set({ mode: "flat" })}>
+              {cur}
+            </button>
+            <button class={a.mode === "pct" ? "tiny on" : "tiny"} onClick={() => set({ mode: "pct" })}>
+              %
+            </button>
+          </>
+        )}
         <input
           id={`f-${kind}`}
           class="write amt"
-          inputMode="decimal"
+          inputMode={kind === "diff" ? "text" : "decimal"}
           placeholder="0"
           style={{ width: "5.5rem" }}
           value={a.val}
           onInput={(e) => set({ val: (e.target as HTMLInputElement).value })}
         />
+        <button class="scratch" onClick={onDrop} aria-label={`Remove ${LABEL[kind]}`}>
+          ×
+        </button>
       </span>
     </div>
   );
